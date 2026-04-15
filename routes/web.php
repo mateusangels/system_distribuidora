@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
@@ -41,6 +42,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/products/{product}/stock', [ProductController::class, 'adjustStock'])
         ->name('products.stock.adjust');
     Route::resource('products', ProductController::class);
+
+    // Categories (apenas criação via AJAX do form de produto)
+    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
 
     // Warranties
     Route::get('/warranties', [WarrantyController::class, 'index'])->name('warranties.index');

@@ -19,7 +19,7 @@ export default function CustomerShow({ customer }: Props) {
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <CardTitle>{customer.name}</CardTitle>
-                            <Link href={`/customers/${customer.id}/edit`} className="text-xs text-brand-300 hover:underline">Editar</Link>
+                            <Link href="/customers" className="text-xs text-brand-600 hover:underline dark:text-brand-300">Voltar à lista</Link>
                         </div>
                     </CardHeader>
                     <CardBody className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -42,7 +42,7 @@ export default function CustomerShow({ customer }: Props) {
                     <CardHeader><CardTitle>Histórico de compras</CardTitle></CardHeader>
                     <CardBody className="p-0">
                         {customer.sales.length === 0 ? (
-                            <div className="px-5 py-8 text-center text-sm text-ink-400">Nenhuma compra registrada.</div>
+                            <div className="px-5 py-8 text-center text-sm text-ink-500">Nenhuma compra registrada.</div>
                         ) : (
                             <Table>
                                 <THead>
@@ -58,7 +58,7 @@ export default function CustomerShow({ customer }: Props) {
                                     {customer.sales.map((s) => (
                                         <TR key={s.id}>
                                             <TD>
-                                                <Link href={`/sales/${s.id}`} className="font-mono text-brand-300 hover:underline">{s.code}</Link>
+                                                <Link href={`/sales/${s.id}`} className="font-mono text-brand-600 hover:underline dark:text-brand-300">{s.code}</Link>
                                             </TD>
                                             <TD>{dateTimeBr(s.paid_at)}</TD>
                                             <TD>{s.items?.length ?? 0}</TD>
@@ -76,7 +76,7 @@ export default function CustomerShow({ customer }: Props) {
                     <CardHeader><CardTitle>Garantias</CardTitle></CardHeader>
                     <CardBody className="p-0">
                         {customer.warranties.length === 0 ? (
-                            <div className="px-5 py-8 text-center text-sm text-ink-400">Nenhuma garantia.</div>
+                            <div className="px-5 py-8 text-center text-sm text-ink-500">Nenhuma garantia.</div>
                         ) : (
                             <Table>
                                 <THead>
@@ -113,8 +113,8 @@ export default function CustomerShow({ customer }: Props) {
 function Info({ label, value }: { label: string; value: string | null | undefined }) {
     return (
         <div>
-            <div className="text-xs uppercase tracking-wide text-ink-400">{label}</div>
-            <div className="mt-1 text-ink-100">{value || <span className="text-ink-500">—</span>}</div>
+            <div className="text-xs uppercase tracking-wide text-ink-500 dark:text-ink-400">{label}</div>
+            <div className="mt-1 text-ink-900 dark:text-ink-100">{value || <span className="text-ink-400">—</span>}</div>
         </div>
     );
 }

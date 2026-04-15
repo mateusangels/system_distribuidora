@@ -6,6 +6,7 @@ export interface User {
     email: string;
     role: Role;
     is_admin: boolean;
+    avatar_url?: string | null;
     email_verified_at?: string | null;
 }
 
@@ -63,6 +64,7 @@ export interface Sale {
     code: string;
     user_id: number;
     customer_id: number | null;
+    customer_document: string | null;
     subtotal: string;
     discount: string;
     total: string;

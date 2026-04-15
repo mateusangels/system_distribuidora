@@ -5,6 +5,7 @@ import { Table, TBody, TD, TH, THead, TR } from '@/Components/ui/Table';
 import Badge from '@/Components/ui/Badge';
 import Button from '@/Components/ui/Button';
 import Input from '@/Components/ui/Input';
+import Select from '@/Components/ui/Select';
 import { brl, dateTimeBr, paymentLabel } from '@/lib/format';
 import type { Paginated, Sale, Customer, User } from '@/types';
 import { useState } from 'react';
@@ -28,18 +29,14 @@ export default function SalesIndex({ sales, filters }: Props) {
                         <div className="w-72">
                             <Input placeholder="Buscar por código ou cliente…" value={q} onChange={(e)=>setQ(e.target.value)} />
                         </div>
-                        <select
-                            value={status}
-                            onChange={(e) => setStatus(e.target.value)}
-                            className="rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100"
-                        >
+                        <Select value={status} onChange={(e) => setStatus(e.target.value)} title="Status">
                             <option value="">Todos status</option>
                             <option value="paid">Pagas</option>
                             <option value="cancelled">Canceladas</option>
-                        </select>
+                        </Select>
                         <Button type="submit" variant="secondary">Filtrar</Button>
                     </form>
-                    <Link href="/pdv"><Button>+ Nova venda (PDV)</Button></Link>
+                    <Link href="/pdv"><Button>Nova venda (PDV)</Button></Link>
                 </div>
 
                 <Card>
@@ -60,10 +57,10 @@ export default function SalesIndex({ sales, filters }: Props) {
                                 {sales.data.map((s) => (
                                     <TR key={s.id}>
                                         <TD>
-                                            <Link href={`/sales/${s.id}`} className="font-mono text-brand-300 hover:underline">{s.code}</Link>
+                                            <Link href={`/sales/${s.id}`} className="font-mono text-brand-600 hover:underline dark:text-brand-300">{s.code}</Link>
                                         </TD>
                                         <TD>{dateTimeBr(s.paid_at ?? null)}</TD>
-                                        <TD>{s.customer?.name ?? <span className="text-ink-500">consumidor</span>}</TD>
+                                        <TD>{s.customer?.name ?? <span className="text-ink-400">consumidor</span>}</TD>
                                         <TD>{s.user?.name}</TD>
                                         <TD>{paymentLabel(s.payment_method)}</TD>
                                         <TD>
@@ -75,7 +72,7 @@ export default function SalesIndex({ sales, filters }: Props) {
                                     </TR>
                                 ))}
                                 {sales.data.length === 0 && (
-                                    <TR><TD colSpan={7} className="text-center py-10 text-ink-400">Nenhuma venda registrada.</TD></TR>
+                                    <TR><TD colSpan={7} className="text-center py-10 text-ink-500">Nenhuma venda registrada.</TD></TR>
                                 )}
                             </TBody>
                         </Table>

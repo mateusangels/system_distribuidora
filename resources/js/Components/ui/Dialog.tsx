@@ -23,10 +23,15 @@ export default function Dialog({ open, onClose, title, children, size = 'md' }: 
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm dark:bg-black/70"
+                onClick={onClose}
+            />
             <div
                 className={cn(
-                    'relative w-full rounded-xl border border-ink-700 bg-ink-900 shadow-2xl animate-slide-up',
+                    'relative w-full rounded-xl border shadow-2xl animate-slide-up',
+                    'bg-white border-ink-200',
+                    'dark:bg-ink-900 dark:border-ink-700',
                     size === 'sm' && 'max-w-md',
                     size === 'md' && 'max-w-xl',
                     size === 'lg' && 'max-w-3xl',
@@ -34,8 +39,10 @@ export default function Dialog({ open, onClose, title, children, size = 'md' }: 
                 )}
             >
                 {title && (
-                    <div className="border-b border-ink-800 px-6 py-4">
-                        <h2 className="text-lg font-semibold text-ink-50">{title}</h2>
+                    <div className="border-b border-ink-200 dark:border-ink-800 px-6 py-4">
+                        <h2 className="text-lg font-semibold text-ink-900 dark:text-ink-50">
+                            {title}
+                        </h2>
                     </div>
                 )}
                 <div className="p-6">{children}</div>

@@ -16,7 +16,10 @@ const Input = forwardRef<HTMLInputElement, Props>(function Input(
     return (
         <div className="space-y-1.5">
             {label && (
-                <label htmlFor={inputId} className="block text-xs font-medium uppercase tracking-wide text-ink-300">
+                <label
+                    htmlFor={inputId}
+                    className="block text-xs font-medium uppercase tracking-wide text-ink-600 dark:text-ink-300"
+                >
                     {label}
                 </label>
             )}
@@ -24,7 +27,8 @@ const Input = forwardRef<HTMLInputElement, Props>(function Input(
                 ref={ref}
                 id={inputId}
                 className={cn(
-                    'block w-full rounded-md border border-ink-700 bg-ink-900 text-ink-50 placeholder-ink-500',
+                    'block w-full rounded-md border bg-white text-ink-900 placeholder-ink-400 border-ink-300',
+                    'dark:bg-ink-900 dark:text-ink-50 dark:placeholder-ink-500 dark:border-ink-700',
                     'focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
                     sizeBig ? 'px-4 py-3 text-lg' : 'px-3 py-2 text-sm',
@@ -33,8 +37,10 @@ const Input = forwardRef<HTMLInputElement, Props>(function Input(
                 )}
                 {...props}
             />
-            {hint && !error && <p className="text-xs text-ink-400">{hint}</p>}
-            {error && <p className="text-xs text-red-400">{error}</p>}
+            {hint && !error && (
+                <p className="text-xs text-ink-500 dark:text-ink-400">{hint}</p>
+            )}
+            {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
         </div>
     );
 });

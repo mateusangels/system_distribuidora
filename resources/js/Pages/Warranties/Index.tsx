@@ -5,6 +5,8 @@ import { Table, TBody, TD, TH, THead, TR } from '@/Components/ui/Table';
 import Badge from '@/Components/ui/Badge';
 import Button from '@/Components/ui/Button';
 import Input from '@/Components/ui/Input';
+import Select from '@/Components/ui/Select';
+import Icon from '@/Components/ui/Icon';
 import { dateBr, warrantyStatusLabel } from '@/lib/format';
 import type { Paginated, Warranty } from '@/types';
 import { useState } from 'react';
@@ -38,20 +40,19 @@ export default function WarrantiesIndex({ warranties, filters, nearExpiryDays }:
                         <div className="w-72">
                             <Input placeholder="Buscar por produto, cliente ou venda…" value={q} onChange={(e)=>setQ(e.target.value)} />
                         </div>
-                        <select
-                            value={status}
-                            onChange={(e) => setStatus(e.target.value)}
-                            className="rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100"
-                        >
+                        <Select value={status} onChange={(e) => setStatus(e.target.value)} title="Status">
                             <option value="">Todos</option>
                             <option value="active">Ativas</option>
                             <option value="expired">Vencidas</option>
                             <option value="used">Utilizadas</option>
-                        </select>
-                        <Button type="submit" variant="secondary">Filtrar</Button>
+                        </Select>
+                        <Button type="submit" variant="secondary">
+                            <Icon name="mdi:filter-outline" className="h-4 w-4" />
+                            Filtrar
+                        </Button>
                     </form>
-                    <div className="text-xs text-ink-400">
-                        Vencimento próximo: <span className="text-amber-300 font-medium">≤ {nearExpiryDays} dias</span>
+                    <div className="text-xs text-ink-500 dark:text-ink-400">
+                        Vencimento próximo: <span className="text-amber-600 font-medium dark:text-amber-300">≤ {nearExpiryDays} dias</span>
                     </div>
                 </div>
 
@@ -75,10 +76,10 @@ export default function WarrantiesIndex({ warranties, filters, nearExpiryDays }:
                                     return (
                                         <TR key={w.id}>
                                             <TD className="font-medium">{w.product?.name}</TD>
-                                            <TD>{w.customer?.name ?? <span className="text-ink-500">consumidor</span>}</TD>
+                                            <TD>{w.customer?.name ?? <span className="text-ink-400">consumidor</span>}</TD>
                                             <TD>
                                                 {w.sale && (
-                                                    <Link href={`/sales/${w.sale.id}`} className="font-mono text-brand-300 hover:underline">
+                                                    <Link href={`/sales/${w.sale.id}`} className="font-mono text-brand-600 hover:underline dark:text-brand-300">
                                                         {w.sale.code}
                                                     </Link>
                                                 )}
@@ -99,9 +100,15 @@ export default function WarrantiesIndex({ warranties, filters, nearExpiryDays }:
                                                 {w.status === 'active' && (
                                                     <div className="inline-flex gap-1">
                                                         {w.customer && (
-                                                            <Button size="sm" variant="ghost" onClick={() => notify(w.id)}>📲 Notificar</Button>
+                                                            <Button size="sm" variant="ghost" onClick={() => notify(w.id)}>
+                                                                <Icon name="mdi:whatsapp" className="h-4 w-4" />
+                                                                Notificar
+                                                            </Button>
                                                         )}
-                                                        <Button size="sm" variant="secondary" onClick={() => markUsed(w.id)}>Marcar usada</Button>
+                                                        <Button size="sm" variant="secondary" onClick={() => markUsed(w.id)}>
+                                                            <Icon name="mdi:check" className="h-4 w-4" />
+                                                            Marcar usada
+                                                        </Button>
                                                     </div>
                                                 )}
                                             </TD>
@@ -109,7 +116,7 @@ export default function WarrantiesIndex({ warranties, filters, nearExpiryDays }:
                                     );
                                 })}
                                 {warranties.data.length === 0 && (
-                                    <TR><TD colSpan={7} className="text-center py-10 text-ink-400">Nenhuma garantia encontrada.</TD></TR>
+                                    <TR><TD colSpan={7} className="text-center py-10 text-ink-500">Nenhuma garantia encontrada.</TD></TR>
                                 )}
                             </TBody>
                         </Table>

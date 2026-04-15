@@ -55,6 +55,7 @@ class SaleController extends Controller
                 items: $request->validated('items'),
                 customerId: $request->validated('customer_id'),
                 payment: $request->validated('payment'),
+                customerDocument: $request->validated('customer_document'),
             );
         } catch (\DomainException $e) {
             // Inertia retorna como erro de validação

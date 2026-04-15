@@ -10,15 +10,25 @@ export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElem
 }
 
 export function THead(props: HTMLAttributes<HTMLTableSectionElement>) {
-    return <thead className="bg-ink-900/80 text-xs uppercase tracking-wide text-ink-400" {...props} />;
+    return (
+        <thead
+            className="bg-ink-50 text-xs uppercase tracking-wide text-ink-500 dark:bg-ink-900/80 dark:text-ink-400"
+            {...props}
+        />
+    );
 }
 
 export function TBody(props: HTMLAttributes<HTMLTableSectionElement>) {
-    return <tbody className="divide-y divide-ink-800" {...props} />;
+    return <tbody className="divide-y divide-ink-200 dark:divide-ink-800" {...props} />;
 }
 
 export function TR({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-    return <tr className={cn('hover:bg-ink-900/60', className)} {...props} />;
+    return (
+        <tr
+            className={cn('hover:bg-ink-50 dark:hover:bg-ink-900/60', className)}
+            {...props}
+        />
+    );
 }
 
 export function TH({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
@@ -26,5 +36,10 @@ export function TH({ className, ...props }: ThHTMLAttributes<HTMLTableCellElemen
 }
 
 export function TD({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-    return <td className={cn('px-4 py-3 text-ink-200', className)} {...props} />;
+    return (
+        <td
+            className={cn('px-4 py-3 text-ink-700 dark:text-ink-200', className)}
+            {...props}
+        />
+    );
 }

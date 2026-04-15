@@ -6,19 +6,32 @@
 
 @layer base {
     html {
+        color-scheme: light;
+    }
+    html.dark {
         color-scheme: dark;
     }
     body {
+        @apply bg-ink-50 text-ink-900;
+    }
+    html.dark body {
         @apply bg-ink-950 text-ink-100;
     }
-    /* Scrollbar dark */
+
+    /* Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.12);
+        background: rgba(0,0,0,0.18);
         border-radius: 4px;
     }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
+    html.dark ::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.12);
+    }
+    html.dark ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.2);
+    }
 }
 
 @layer utilities {

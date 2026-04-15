@@ -31,10 +31,10 @@ export default function ToastContainer() {
                 <div
                     key={it.id}
                     className={cn(
-                        'pointer-events-auto min-w-[260px] rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur animate-slide-up',
+                        'pointer-events-auto min-w-[260px] rounded-lg border px-4 py-3 text-sm shadow-lg animate-slide-up',
                         it.type === 'success'
-                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                            : 'border-brand-500/40 bg-brand-500/10 text-brand-200'
+                            ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                            : 'border-brand-300 bg-brand-50 text-brand-800 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-200'
                     )}
                 >
                     {it.message}

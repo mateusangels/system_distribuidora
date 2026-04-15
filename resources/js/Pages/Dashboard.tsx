@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Card, CardBody, CardHeader, CardTitle } from '@/Components/ui/Card';
 import { Table, TBody, TD, TH, THead, TR } from '@/Components/ui/Table';
 import Badge from '@/Components/ui/Badge';
+import Icon from '@/Components/ui/Icon';
 import { brl } from '@/lib/format';
 
 interface Props {
@@ -65,12 +66,12 @@ export default function Dashboard({ metrics, topProducts, lowStock, expiringWarr
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle>Top 5 produtos (30 dias)</CardTitle>
-                                <Link href="/sales" className="text-xs text-brand-300 hover:underline">ver vendas</Link>
+                                <Link href="/sales" className="text-xs text-brand-600 hover:underline dark:text-brand-300">ver vendas</Link>
                             </div>
                         </CardHeader>
                         <CardBody className="p-0">
                             {topProducts.length === 0 ? (
-                                <div className="px-5 py-8 text-center text-sm text-ink-400">Nenhuma venda ainda.</div>
+                                <div className="px-5 py-8 text-center text-sm text-ink-500">Nenhuma venda ainda.</div>
                             ) : (
                                 <Table>
                                     <THead>
@@ -84,7 +85,7 @@ export default function Dashboard({ metrics, topProducts, lowStock, expiringWarr
                                         {topProducts.map((p) => (
                                             <TR key={p.product_sku}>
                                                 <TD>
-                                                    <div className="font-medium text-ink-100">{p.product_name}</div>
+                                                    <div className="font-medium text-ink-900 dark:text-ink-100">{p.product_name}</div>
                                                     <div className="text-xs text-ink-500">{p.product_sku}</div>
                                                 </TD>
                                                 <TD className="text-right">{p.qty_sold}</TD>
@@ -102,12 +103,15 @@ export default function Dashboard({ metrics, topProducts, lowStock, expiringWarr
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle>Estoque baixo</CardTitle>
-                                <Link href="/products" className="text-xs text-brand-300 hover:underline">gerenciar</Link>
+                                <Link href="/products" className="text-xs text-brand-600 hover:underline dark:text-brand-300">gerenciar</Link>
                             </div>
                         </CardHeader>
                         <CardBody className="p-0">
                             {lowStock.length === 0 ? (
-                                <div className="px-5 py-8 text-center text-sm text-emerald-400">✓ Tudo em dia.</div>
+                                <div className="flex items-center justify-center gap-2 px-5 py-8 text-center text-sm text-emerald-600 dark:text-emerald-400">
+                                    <Icon name="mdi:check-circle-outline" className="h-5 w-5" />
+                                    Tudo em dia.
+                                </div>
                             ) : (
                                 <Table>
                                     <THead>
@@ -121,7 +125,7 @@ export default function Dashboard({ metrics, topProducts, lowStock, expiringWarr
                                         {lowStock.map((p) => (
                                             <TR key={p.id}>
                                                 <TD>
-                                                    <Link href={`/products/${p.id}/edit`} className="font-medium text-ink-100 hover:text-brand-300">
+                                                    <Link href="/products" className="font-medium text-ink-900 hover:text-brand-600 dark:text-ink-100 dark:hover:text-brand-300">
                                                         {p.name}
                                                     </Link>
                                                     <div className="text-xs text-ink-500">{p.sku}</div>
@@ -129,7 +133,7 @@ export default function Dashboard({ metrics, topProducts, lowStock, expiringWarr
                                                 <TD className="text-right">
                                                     <Badge tone={p.stock_qty === 0 ? 'danger' : 'warning'}>{p.stock_qty}</Badge>
                                                 </TD>
-                                                <TD className="text-right text-ink-400">{p.min_stock_qty}</TD>
+                                                <TD className="text-right text-ink-500 dark:text-ink-400">{p.min_stock_qty}</TD>
                                             </TR>
                                         ))}
                                     </TBody>
@@ -144,12 +148,15 @@ export default function Dashboard({ metrics, topProducts, lowStock, expiringWarr
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <CardTitle>Garantias vencendo em breve</CardTitle>
-                            <Link href="/warranties" className="text-xs text-brand-300 hover:underline">ver todas</Link>
+                            <Link href="/warranties" className="text-xs text-brand-600 hover:underline dark:text-brand-300">ver todas</Link>
                         </div>
                     </CardHeader>
                     <CardBody className="p-0">
                         {expiringWarranties.length === 0 ? (
-                            <div className="px-5 py-8 text-center text-sm text-emerald-400">✓ Nenhuma garantia vencendo nos próximos dias.</div>
+                            <div className="flex items-center justify-center gap-2 px-5 py-8 text-center text-sm text-emerald-600 dark:text-emerald-400">
+                                <Icon name="mdi:check-circle-outline" className="h-5 w-5" />
+                                Nenhuma garantia vencendo nos próximos dias.
+                            </div>
                         ) : (
                             <Table>
                                 <THead>
@@ -164,8 +171,8 @@ export default function Dashboard({ metrics, topProducts, lowStock, expiringWarr
                                     {expiringWarranties.map((w) => (
                                         <TR key={w.id}>
                                             <TD className="font-medium">{w.product?.name}</TD>
-                                            <TD>{w.customer?.name ?? <span className="text-ink-500">—</span>}</TD>
-                                            <TD>{w.customer?.whatsapp ?? w.customer?.phone ?? <span className="text-ink-500">—</span>}</TD>
+                                            <TD>{w.customer?.name ?? <span className="text-ink-400">—</span>}</TD>
+                                            <TD>{w.customer?.whatsapp ?? w.customer?.phone ?? <span className="text-ink-400">—</span>}</TD>
                                             <TD className="text-right">
                                                 <Badge tone="warning">
                                                     {new Date(w.ends_at).toLocaleDateString('pt-BR')}
@@ -185,15 +192,15 @@ export default function Dashboard({ metrics, topProducts, lowStock, expiringWarr
 
 function MetricCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: 'brand'|'info'|'warning' }) {
     const ring = {
-        brand: 'ring-brand-500/40 from-brand-500/10',
-        info: 'ring-sky-500/40 from-sky-500/10',
-        warning: 'ring-amber-500/40 from-amber-500/10',
+        brand: 'ring-brand-200 from-brand-50 dark:ring-brand-500/40 dark:from-brand-500/10',
+        info: 'ring-sky-200 from-sky-50 dark:ring-sky-500/40 dark:from-sky-500/10',
+        warning: 'ring-amber-200 from-amber-50 dark:ring-amber-500/40 dark:from-amber-500/10',
     }[accent || 'brand'];
     return (
-        <div className={`rounded-xl border border-ink-800 bg-gradient-to-br ${ring} to-ink-900 p-5 ring-1`}>
-            <div className="text-xs uppercase tracking-wide text-ink-400">{label}</div>
-            <div className="mt-1 text-3xl font-bold text-ink-50">{value}</div>
-            {sub && <div className="mt-1 text-xs text-ink-400">{sub}</div>}
+        <div className={`rounded-xl border border-ink-200 bg-gradient-to-br ${ring} to-white p-5 ring-1 dark:border-ink-800 dark:to-ink-900`}>
+            <div className="text-xs uppercase tracking-wide text-ink-600 dark:text-ink-400">{label}</div>
+            <div className="mt-1 text-3xl font-bold text-ink-900 dark:text-ink-50">{value}</div>
+            {sub && <div className="mt-1 text-xs text-ink-500 dark:text-ink-400">{sub}</div>}
         </div>
     );
 }

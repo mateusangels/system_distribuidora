@@ -14,7 +14,7 @@ class CustomerController extends Controller
     public function index(Request $request): Response
     {
         $customers = Customer::search($request->string('q')->toString())
-            ->orderBy('name')
+            ->latest('id') // mais novos primeiro
             ->paginate(20)
             ->withQueryString();
 
@@ -24,9 +24,10 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('Customers/Form', ['customer' => null]);
+        // Formulário é um modal na listagem — redireciona com flag pra abrir automaticamente.
+        return redirect()->route('customers.index', ['new' => 1]);
     }
 
     public function store(StoreCustomerRequest $request): RedirectResponse
@@ -46,9 +47,10 @@ class CustomerController extends Controller
         return Inertia::render('Customers/Show', ['customer' => $customer]);
     }
 
-    public function edit(Customer $customer): Response
+    public function edit(Customer $customer): RedirectResponse
     {
-        return Inertia::render('Customers/Form', ['customer' => $customer]);
+        // Edição agora é via modal na listagem.
+        return redirect()->route('customers.index', ['edit' => $customer->id]);
     }
 
     public function update(StoreCustomerRequest $request, Customer $customer): RedirectResponse

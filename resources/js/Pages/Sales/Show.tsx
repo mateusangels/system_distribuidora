@@ -4,6 +4,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/Components/ui/Card';
 import { Table, TBody, TD, TH, THead, TR } from '@/Components/ui/Table';
 import Badge from '@/Components/ui/Badge';
 import Button from '@/Components/ui/Button';
+import Icon from '@/Components/ui/Icon';
 import { brl, dateTimeBr, paymentLabel } from '@/lib/format';
 import type { Sale } from '@/types';
 
@@ -24,17 +25,26 @@ export default function SaleShow({ sale }: Props) {
                         <Badge tone={sale.status === 'paid' ? 'success' : sale.status === 'cancelled' ? 'danger' : 'warning'}>
                             {sale.status === 'paid' ? 'Paga' : sale.status === 'cancelled' ? 'Cancelada' : 'Aberta'}
                         </Badge>
-                        <span className="ml-2 text-sm text-ink-400">{dateTimeBr(sale.paid_at ?? null)}</span>
+                        <span className="ml-2 text-sm text-ink-500 dark:text-ink-400">{dateTimeBr(sale.paid_at ?? null)}</span>
                     </div>
                     <div className="flex gap-2">
                         <a href={`/sales/${sale.id}/receipt`} target="_blank" rel="noreferrer">
-                            <Button variant="secondary">🧾 Cupom HTML</Button>
+                            <Button variant="secondary">
+                                <Icon name="mdi:receipt-text-outline" className="h-4 w-4" />
+                                Cupom HTML
+                            </Button>
                         </a>
                         <a href={`/sales/${sale.id}/receipt?format=escpos`}>
-                            <Button variant="ghost">⬇ Cupom ESC/POS</Button>
+                            <Button variant="ghost">
+                                <Icon name="mdi:download-outline" className="h-4 w-4" />
+                                Cupom ESC/POS
+                            </Button>
                         </a>
                         {sale.status === 'paid' && (
-                            <Button variant="danger" onClick={cancel}>Cancelar venda</Button>
+                            <Button variant="danger" onClick={cancel}>
+                                <Icon name="mdi:close-circle-outline" className="h-4 w-4" />
+                                Cancelar venda
+                            </Button>
                         )}
                     </div>
                 </div>
@@ -55,7 +65,7 @@ export default function SaleShow({ sale }: Props) {
                                 {sale.items?.map((it) => (
                                     <TR key={it.id}>
                                         <TD>
-                                            <div className="font-medium text-ink-100">{it.product_name}</div>
+                                            <div className="font-medium text-ink-900 dark:text-ink-100">{it.product_name}</div>
                                             <div className="text-xs text-ink-500">{it.product_sku}</div>
                                         </TD>
                                         <TD className="text-center">{it.qty}</TD>
@@ -74,10 +84,10 @@ export default function SaleShow({ sale }: Props) {
                         <CardBody>
                             {sale.customer ? (
                                 <div className="space-y-1 text-sm">
-                                    <div className="font-medium text-ink-100">{sale.customer.name}</div>
-                                    <div className="text-ink-400">{sale.customer.document}</div>
-                                    <div className="text-ink-400">{sale.customer.whatsapp || sale.customer.phone}</div>
-                                    <Link href={`/customers/${sale.customer.id}`} className="text-xs text-brand-300 hover:underline">ver perfil</Link>
+                                    <div className="font-medium text-ink-900 dark:text-ink-100">{sale.customer.name}</div>
+                                    <div className="text-ink-500 dark:text-ink-400">{sale.customer.document}</div>
+                                    <div className="text-ink-500 dark:text-ink-400">{sale.customer.whatsapp || sale.customer.phone}</div>
+                                    <Link href={`/customers/${sale.customer.id}`} className="text-xs text-brand-600 hover:underline dark:text-brand-300">ver perfil</Link>
                                 </div>
                             ) : (
                                 <span className="text-ink-500 text-sm">Consumidor não identificado</span>
@@ -134,8 +144,8 @@ export default function SaleShow({ sale }: Props) {
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
     return (
-        <div className={`flex justify-between ${bold ? 'text-base font-semibold text-ink-50' : ''}`}>
-            <span className="text-ink-400">{label}</span>
+        <div className={`flex justify-between ${bold ? 'text-base font-semibold text-ink-900 dark:text-ink-50' : ''}`}>
+            <span className="text-ink-500 dark:text-ink-400">{label}</span>
             <span className="font-mono">{value}</span>
         </div>
     );

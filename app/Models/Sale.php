@@ -25,6 +25,7 @@ class Sale extends Model
         'code',
         'user_id',
         'customer_id',
+        'customer_document',
         'subtotal',
         'discount',
         'total',

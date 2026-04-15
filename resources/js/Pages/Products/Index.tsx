@@ -1,18 +1,26 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Card, CardBody } from '@/Components/ui/Card';
 import { Table, TBody, TD, TH, THead, TR } from '@/Components/ui/Table';
 import Badge from '@/Components/ui/Badge';
 import Button from '@/Components/ui/Button';
 import Input from '@/Components/ui/Input';
+import Select from '@/Components/ui/Select';
+import Icon from '@/Components/ui/Icon';
+import ProductFormDialog from './ProductFormDialog';
 import { brl } from '@/lib/format';
 import type { Category, Paginated, Product, PageProps } from '@/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Props {
     products: Paginated<Product & { category?: Category | null }>;
     categories: Category[];
-    filters: { q: string; category_id: number | null };
+    filters: {
+        q: string;
+        category_id: number | null;
+        stock: 'out' | 'low' | 'ok' | null;
+        warranty: 'with' | 'without' | null;
+    };
 }
 
 export default function ProductsIndex({ products, categories, filters }: Props) {
@@ -20,10 +28,44 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
     const isAdmin = props.auth?.user?.is_admin;
     const [q, setQ] = useState(filters.q ?? '');
     const [cat, setCat] = useState<string>(filters.category_id ? String(filters.category_id) : '');
+    const [stock, setStock] = useState<string>(filters.stock ?? '');
+    const [warranty, setWarranty] = useState<string>(filters.warranty ?? '');
+    const [editing, setEditing] = useState<Product | null | 'new'>(null);
+
+    // Abre o modal automaticamente quando vem de /products/create ou /products/{id}/edit
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('new')) {
+            setEditing('new');
+            params.delete('new');
+            const q = params.toString();
+            window.history.replaceState({}, '', window.location.pathname + (q ? `?${q}` : ''));
+        } else if (params.get('edit')) {
+            const id = parseInt(params.get('edit') || '0');
+            const p = products.data.find((x) => x.id === id);
+            if (p) setEditing(p);
+            params.delete('edit');
+            const q = params.toString();
+            window.history.replaceState({}, '', window.location.pathname + (q ? `?${q}` : ''));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const apply = () => {
-        router.get('/products', { q, category_id: cat || undefined }, { preserveState: true, replace: true });
+        router.get('/products', {
+            q,
+            category_id: cat || undefined,
+            stock: stock || undefined,
+            warranty: warranty || undefined,
+        }, { preserveState: true, replace: true });
     };
+
+    const resetFilters = () => {
+        setQ(''); setCat(''); setStock(''); setWarranty('');
+        router.get('/products', {}, { preserveState: false, replace: true });
+    };
+
+    const hasFilter = !!(q || cat || stock || warranty);
 
     const remove = (id: number) => {
         if (!confirm('Remover este produto? (Se tiver histórico, apenas será inativado)')) return;
@@ -39,29 +81,46 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                         onSubmit={(e) => { e.preventDefault(); apply(); }}
                         className="flex items-end gap-2 flex-wrap"
                     >
-                        <div className="w-72">
+                        <div className="w-64">
                             <Input
-                                placeholder="Buscar por nome, SKU ou código…"
+                                placeholder="Nome, SKU ou código…"
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
                             />
                         </div>
-                        <select
-                            value={cat}
-                            onChange={(e) => setCat(e.target.value)}
-                            className="rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-100"
-                        >
+                        <Select value={cat} onChange={(e) => setCat(e.target.value)} title="Categoria">
                             <option value="">Todas categorias</option>
                             {categories.map((c) => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
-                        </select>
-                        <Button type="submit" variant="secondary">Filtrar</Button>
+                        </Select>
+                        <Select value={stock} onChange={(e) => setStock(e.target.value)} title="Estoque">
+                            <option value="">Todo estoque</option>
+                            <option value="out">Sem estoque</option>
+                            <option value="low">Estoque baixo</option>
+                            <option value="ok">Estoque OK</option>
+                        </Select>
+                        <Select value={warranty} onChange={(e) => setWarranty(e.target.value)} title="Garantia">
+                            <option value="">Todas garantias</option>
+                            <option value="with">Com garantia</option>
+                            <option value="without">Sem garantia</option>
+                        </Select>
+                        <Button type="submit" variant="secondary">
+                            <Icon name="mdi:filter-outline" className="h-4 w-4" />
+                            Filtrar
+                        </Button>
+                        {hasFilter && (
+                            <Button type="button" variant="ghost" onClick={resetFilters} title="Limpar filtros">
+                                <Icon name="mdi:close" className="h-4 w-4" />
+                                Limpar
+                            </Button>
+                        )}
                     </form>
                     {isAdmin && (
-                        <Link href="/products/create">
-                            <Button>+ Novo produto</Button>
-                        </Link>
+                        <Button onClick={() => setEditing('new')}>
+                            <Icon name="mdi:plus" className="h-4 w-4" />
+                            Novo produto
+                        </Button>
                     )}
                 </div>
 
@@ -82,14 +141,14 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                 {products.data.map((p) => (
                                     <TR key={p.id}>
                                         <TD>
-                                            <div className="font-medium text-ink-100">{p.name}</div>
+                                            <div className="font-medium text-ink-900 dark:text-ink-100">{p.name}</div>
                                             {!p.active && <Badge tone="default" className="mt-1">inativo</Badge>}
                                         </TD>
                                         <TD className="text-xs">
-                                            <div className="text-ink-200">{p.sku}</div>
+                                            <div className="text-ink-800 dark:text-ink-200">{p.sku}</div>
                                             <div className="text-ink-500">{p.barcode || '—'}</div>
                                         </TD>
-                                        <TD className="text-ink-300">{p.category?.name ?? '—'}</TD>
+                                        <TD className="text-ink-600 dark:text-ink-300">{p.category?.name ?? '—'}</TD>
                                         <TD className="text-right font-mono">{brl(p.sale_price)}</TD>
                                         <TD className="text-right">
                                             <Badge tone={p.stock_qty <= p.min_stock_qty ? (p.stock_qty === 0 ? 'danger' : 'warning') : 'success'}>
@@ -99,10 +158,19 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                         <TD className="text-right">
                                             {isAdmin ? (
                                                 <div className="inline-flex gap-1">
-                                                    <Link href={`/products/${p.id}/edit`}>
-                                                        <Button size="sm" variant="secondary">Editar</Button>
-                                                    </Link>
-                                                    <Button size="sm" variant="ghost" onClick={() => remove(p.id)}>×</Button>
+                                                    <Button size="sm" variant="secondary" onClick={() => setEditing(p)}>
+                                                        <Icon name="mdi:pencil-outline" className="h-4 w-4" />
+                                                        Editar
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => remove(p.id)}
+                                                        title="Remover"
+                                                        className="!text-red-600 hover:!bg-red-50 dark:!text-red-400 dark:hover:!bg-red-500/10"
+                                                    >
+                                                        <Icon name="mdi:trash-can-outline" className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
                                             ) : (
                                                 <span className="text-xs text-ink-500">somente leitura</span>
@@ -112,7 +180,7 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                 ))}
                                 {products.data.length === 0 && (
                                     <TR>
-                                        <TD colSpan={6} className="text-center py-10 text-ink-400">Nenhum produto encontrado.</TD>
+                                        <TD colSpan={6} className="text-center py-10 text-ink-500">Nenhum produto encontrado.</TD>
                                     </TR>
                                 )}
                             </TBody>
@@ -122,6 +190,13 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
 
                 <Pagination links={products.links} />
             </div>
+
+            <ProductFormDialog
+                open={editing !== null}
+                product={editing === 'new' ? null : editing}
+                categories={categories}
+                onClose={() => setEditing(null)}
+            />
         </AppLayout>
     );
 }
@@ -135,7 +210,7 @@ function Pagination({ links }: { links: Array<{ url: string | null; label: strin
                     key={i}
                     disabled={!l.url}
                     onClick={() => l.url && router.visit(l.url, { preserveState: true })}
-                    className={`rounded-md border px-3 py-1 text-xs disabled:opacity-30 ${l.active ? 'border-brand-500 bg-brand-600 text-white' : 'border-ink-700 bg-ink-900 text-ink-300 hover:bg-ink-800'}`}
+                    className={`rounded-md border px-3 py-1 text-xs disabled:opacity-30 ${l.active ? 'border-brand-500 bg-brand-600 text-white' : 'border-ink-200 bg-white text-ink-700 hover:bg-ink-100 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-300 dark:hover:bg-ink-800'}`}
                     dangerouslySetInnerHTML={{ __html: l.label }}
                 />
             ))}

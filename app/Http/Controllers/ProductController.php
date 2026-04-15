@@ -15,10 +15,18 @@ class ProductController extends Controller
 {
     public function index(Request $request): Response
     {
+        $stock = $request->string('stock')->toString();     // '', 'out', 'low', 'ok'
+        $warranty = $request->string('warranty')->toString(); // '', 'with', 'without'
+
         $products = Product::with('category:id,name')
             ->search($request->string('q')->toString())
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
-            ->orderBy('name')
+            ->when($stock === 'out', fn ($q) => $q->where('stock_qty', '<=', 0))
+            ->when($stock === 'low', fn ($q) => $q->whereColumn('stock_qty', '<=', 'min_stock_qty')->where('stock_qty', '>', 0))
+            ->when($stock === 'ok', fn ($q) => $q->whereColumn('stock_qty', '>', 'min_stock_qty'))
+            ->when($warranty === 'with', fn ($q) => $q->where('warranty_days', '>', 0))
+            ->when($warranty === 'without', fn ($q) => $q->where('warranty_days', '<=', 0))
+            ->latest('id') // mais novos primeiro
             ->paginate(20)
             ->withQueryString();
 
@@ -28,16 +36,16 @@ class ProductController extends Controller
             'filters' => [
                 'q' => $request->string('q')->toString(),
                 'category_id' => $request->integer('category_id') ?: null,
+                'stock' => $stock ?: null,
+                'warranty' => $warranty ?: null,
             ],
         ]);
     }
 
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('Products/Form', [
-            'product' => null,
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
-        ]);
+        // Formulário é um modal na listagem.
+        return redirect()->route('products.index', ['new' => 1]);
     }
 
     public function store(StoreProductRequest $request): RedirectResponse
@@ -46,12 +54,10 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Produto cadastrado!');
     }
 
-    public function edit(Product $product): Response
+    public function edit(Product $product): RedirectResponse
     {
-        return Inertia::render('Products/Form', [
-            'product' => $product,
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
-        ]);
+        // Edição agora é via modal na listagem.
+        return redirect()->route('products.index', ['edit' => $product->id]);
     }
 
     public function update(StoreProductRequest $request, Product $product): RedirectResponse

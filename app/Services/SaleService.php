@@ -23,13 +23,13 @@ class SaleService
      * $items: [['product_id'=>int, 'qty'=>int, 'unit_price'=>?float], ...]
      * $payment: ['method'=>cash|pix|credit|debit, 'amount_received'=>?float, 'discount'=>?float]
      */
-    public function createSale(array $items, ?int $customerId, array $payment): Sale
+    public function createSale(array $items, ?int $customerId, array $payment, ?string $customerDocument = null): Sale
     {
         if (empty($items)) {
             throw new \InvalidArgumentException('Venda precisa de pelo menos 1 item.');
         }
 
-        return DB::transaction(function () use ($items, $customerId, $payment) {
+        return DB::transaction(function () use ($items, $customerId, $payment, $customerDocument) {
             $userId = auth()->id();
             if (!$userId) {
                 throw new \RuntimeException('Usuário não autenticado.');
@@ -39,6 +39,7 @@ class SaleService
                 'code' => Sale::nextCode(),
                 'user_id' => $userId,
                 'customer_id' => $customerId,
+                'customer_document' => $customerDocument ? trim($customerDocument) : null,
                 'subtotal' => 0,
                 'discount' => round((float) ($payment['discount'] ?? 0), 2),
                 'total' => 0,

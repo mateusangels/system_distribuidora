@@ -17,6 +17,7 @@ class StoreSaleRequest extends FormRequest
     {
         return [
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'customer_document' => ['nullable', 'string', 'max:32'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
