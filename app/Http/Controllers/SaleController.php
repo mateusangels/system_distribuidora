@@ -58,7 +58,12 @@ class SaleController extends Controller
                 customerDocument: $request->validated('customer_document'),
             );
         } catch (\DomainException $e) {
-            // Inertia retorna como erro de validação
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'errors' => ['sale' => [$e->getMessage()]],
+                ], 422);
+            }
             return back()->withErrors(['sale' => $e->getMessage()])->withInput();
         }
 

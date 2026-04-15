@@ -37,6 +37,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/customers/search', [CustomerController::class, 'search'])->name('customers.search');
     Route::resource('customers', CustomerController::class);
 
+    // Categories (criação rápida via AJAX no form de produto)
+    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+
     // Products
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
     Route::post('/products/{product}/stock', [ProductController::class, 'adjustStock'])

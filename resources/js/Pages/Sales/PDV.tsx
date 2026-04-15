@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import Button from '@/Components/ui/Button';
 import Input from '@/Components/ui/Input';
@@ -229,6 +229,8 @@ export default function PDV() {
             setCustomer(null);
             setDiscount(0);
             setPaymentOpen(false);
+            // Atualiza props do Inertia (estoque, alertas) sem sair da página
+            router.reload({ only: ['alerts'] });
         } catch (e) {
             setError('Erro de rede ao finalizar venda.');
             setTimeout(() => setError(null), 3500);

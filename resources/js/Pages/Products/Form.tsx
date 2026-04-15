@@ -3,8 +3,9 @@ import { Head, useForm, Link } from '@inertiajs/react';
 import { Card, CardBody, CardHeader, CardTitle, CardFooter } from '@/Components/ui/Card';
 import Input from '@/Components/ui/Input';
 import Button from '@/Components/ui/Button';
+import Dialog from '@/Components/ui/Dialog';
 import type { Category, Product } from '@/types';
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 
 interface Props {
     product: Product | null;
@@ -13,6 +14,12 @@ interface Props {
 
 export default function ProductForm({ product, categories }: Props) {
     const isEdit = !!product;
+    const [categoryList, setCategoryList] = useState<Category[]>(categories);
+    const [newCategoryOpen, setNewCategoryOpen] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryError, setNewCategoryError] = useState<string | null>(null);
+    const [creatingCategory, setCreatingCategory] = useState(false);
+
     const { data, setData, post, put, processing, errors } = useForm({
         sku: product?.sku ?? '',
         barcode: product?.barcode ?? '',
@@ -33,6 +40,58 @@ export default function ProductForm({ product, categories }: Props) {
             put(`/products/${product!.id}`);
         } else {
             post('/products');
+        }
+    };
+
+    const createCategory = async () => {
+        const name = newCategoryName.trim();
+        if (!name) {
+            setNewCategoryError('Informe o nome da categoria.');
+            return;
+        }
+        setCreatingCategory(true);
+        setNewCategoryError(null);
+
+        const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+
+        try {
+            const response = await fetch('/categories', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ name }),
+            });
+
+            if (!response.ok) {
+                let message = 'Erro ao criar categoria.';
+                try {
+                    const errData = await response.json();
+                    if (errData?.errors?.name) {
+                        message = errData.errors.name[0];
+                    } else if (errData?.message) {
+                        message = errData.message;
+                    }
+                } catch {
+                    // sem corpo JSON
+                }
+                setNewCategoryError(message);
+                return;
+            }
+
+            const category: Category = await response.json();
+            setCategoryList((prev) => [...prev, category].sort((a, b) => a.name.localeCompare(b.name)));
+            setData('category_id', category.id as any);
+            setNewCategoryName('');
+            setNewCategoryOpen(false);
+        } catch {
+            setNewCategoryError('Erro de rede. Tente novamente.');
+        } finally {
+            setCreatingCategory(false);
         }
     };
 
@@ -59,14 +118,24 @@ export default function ProductForm({ product, categories }: Props) {
                         </div>
                         <div>
                             <label className="block text-xs font-medium uppercase tracking-wide text-ink-300 mb-1.5">Categoria</label>
-                            <select
-                                value={data.category_id ?? ''}
-                                onChange={(e) => setData('category_id', e.target.value as any)}
-                                className="block w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-50"
-                            >
-                                <option value="">— sem categoria —</option>
-                                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
+                            <div className="flex gap-2">
+                                <select
+                                    value={data.category_id ?? ''}
+                                    onChange={(e) => setData('category_id', e.target.value as any)}
+                                    className="block w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-50"
+                                >
+                                    <option value="">— sem categoria —</option>
+                                    {categoryList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={() => { setNewCategoryName(''); setNewCategoryError(null); setNewCategoryOpen(true); }}
+                                    className="shrink-0 rounded-md border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-ink-100 hover:bg-ink-700"
+                                    title="Nova categoria"
+                                >
+                                    + Nova
+                                </button>
+                            </div>
                         </div>
                         <div className="flex items-center gap-2 pt-6">
                             <input
@@ -99,6 +168,30 @@ export default function ProductForm({ product, categories }: Props) {
                     </CardFooter>
                 </Card>
             </form>
+
+            <Dialog open={newCategoryOpen} onClose={() => setNewCategoryOpen(false)} title="Nova categoria" size="sm">
+                <div className="space-y-3">
+                    <Input
+                        label="Nome da categoria"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        error={newCategoryError ?? undefined}
+                        autoFocus
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                createCategory();
+                            }
+                        }}
+                    />
+                    <div className="flex justify-end gap-2 pt-1">
+                        <Button type="button" variant="ghost" onClick={() => setNewCategoryOpen(false)}>Cancelar</Button>
+                        <Button type="button" onClick={createCategory} disabled={creatingCategory}>
+                            {creatingCategory ? 'Criando…' : 'Criar categoria'}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
         </AppLayout>
     );
 }

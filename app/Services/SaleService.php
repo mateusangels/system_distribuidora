@@ -115,6 +115,10 @@ class SaleService
                 ? round((float) $payment['amount_received'], 2)
                 : $total;
 
+            if ($sale->payment_method === Sale::PAYMENT_CASH && $amountReceived < $total) {
+                throw new \DomainException('Valor recebido é menor que o total da venda.');
+            }
+
             $changeDue = $sale->payment_method === Sale::PAYMENT_CASH
                 ? max(0, round($amountReceived - $total, 2))
                 : null;
