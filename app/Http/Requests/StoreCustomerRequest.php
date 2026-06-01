@@ -11,6 +11,19 @@ class StoreCustomerRequest extends FormRequest
         return (bool) $this->user();
     }
 
+    /**
+     * Garante que credit_limit nunca chegue null no insert (coluna NOT NULL).
+     * O middleware ConvertEmptyStringsToNull transforma "" em null antes daqui.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'credit_limit' => ($this->credit_limit === null || $this->credit_limit === '')
+                ? 0
+                : $this->credit_limit,
+        ]);
+    }
+
     public function rules(): array
     {
         return [

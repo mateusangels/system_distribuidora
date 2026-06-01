@@ -7,6 +7,10 @@
         <meta name="theme-color" content="#11141c" media="(prefers-color-scheme: dark)">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        {{-- Favicon = logo da Adega Responsa --}}
+        <link rel="icon" type="image/png" href="/logo.png">
+        <link rel="apple-touch-icon" href="/logo.png">
+
         <title inertia>{{ config('app.name', 'Adega Responsa') }}</title>
 
         {{-- Aplica o tema salvo antes de qualquer render pra evitar flash --}}
