@@ -5,7 +5,7 @@ import { Table, TBody, TD, TH, THead, TR } from '@/Components/ui/Table';
 import Badge from '@/Components/ui/Badge';
 import Button from '@/Components/ui/Button';
 import Icon from '@/Components/ui/Icon';
-import { brl, dateTimeBr, paymentLabel } from '@/lib/format';
+import { brl, dateBr, dateTimeBr, num, paymentLabel, saleStatusLabel } from '@/lib/format';
 import type { Sale } from '@/types';
 
 interface Props { sale: Sale; }
@@ -23,9 +23,9 @@ export default function SaleShow({ sale }: Props) {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <Badge tone={sale.status === 'paid' ? 'success' : sale.status === 'cancelled' ? 'danger' : 'warning'}>
-                            {sale.status === 'paid' ? 'Paga' : sale.status === 'cancelled' ? 'Cancelada' : 'Aberta'}
+                            {saleStatusLabel(sale.status)}
                         </Badge>
-                        <span className="ml-2 text-sm text-ink-500 dark:text-ink-400">{dateTimeBr(sale.paid_at ?? null)}</span>
+                        <span className="ml-2 text-sm text-ink-500 dark:text-ink-400">{dateTimeBr(sale.paid_at ?? sale.created_at ?? null)}</span>
                     </div>
                     <div className="flex gap-2">
                         <a href={`/sales/${sale.id}/receipt`} target="_blank" rel="noreferrer">
@@ -40,7 +40,7 @@ export default function SaleShow({ sale }: Props) {
                                 Cupom ESC/POS
                             </Button>
                         </a>
-                        {sale.status === 'paid' && (
+                        {(sale.status === 'paid' || sale.status === 'pending') && (
                             <Button variant="danger" onClick={cancel}>
                                 <Icon name="mdi:close-circle-outline" className="h-4 w-4" />
                                 Cancelar venda
@@ -111,29 +111,22 @@ export default function SaleShow({ sale }: Props) {
                     </Card>
                 </div>
 
-                {sale.warranties && sale.warranties.length > 0 && (
-                    <Card>
-                        <CardHeader><CardTitle>Garantias geradas</CardTitle></CardHeader>
-                        <CardBody className="p-0">
-                            <Table>
-                                <THead>
-                                    <TR><TH>Produto</TH><TH>Início</TH><TH>Vence</TH><TH>Status</TH></TR>
-                                </THead>
-                                <TBody>
-                                    {sale.warranties.map((w) => (
-                                        <TR key={w.id}>
-                                            <TD>{w.product?.name}</TD>
-                                            <TD>{new Date(w.starts_at).toLocaleDateString('pt-BR')}</TD>
-                                            <TD>{new Date(w.ends_at).toLocaleDateString('pt-BR')}</TD>
-                                            <TD>
-                                                <Badge tone={w.status === 'active' ? 'success' : 'default'}>
-                                                    {w.status === 'active' ? 'Ativa' : w.status}
-                                                </Badge>
-                                            </TD>
-                                        </TR>
-                                    ))}
-                                </TBody>
-                            </Table>
+                {sale.payment_method === 'fiado' && (
+                    <Card className={sale.status === 'pending' ? 'border-amber-300 dark:border-amber-500/40' : undefined}>
+                        <CardHeader><CardTitle>Fiado</CardTitle></CardHeader>
+                        <CardBody className="space-y-1 text-sm">
+                            <Row label="Vencimento" value={dateBr(sale.due_date)} />
+                            <Row label="Pago" value={brl(sale.amount_paid)} />
+                            <Row
+                                label="Saldo devedor"
+                                value={brl(Math.max(0, num(sale.total) - num(sale.amount_paid)))}
+                                bold
+                            />
+                            {sale.customer && (
+                                <Link href={`/customers/${sale.customer.id}`} className="inline-block pt-1 text-xs text-brand-600 hover:underline dark:text-brand-300">
+                                    Registrar recebimento / cobrar →
+                                </Link>
+                            )}
                         </CardBody>
                     </Card>
                 )}

@@ -37,7 +37,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'alerts' => fn () => $user
                 ? app(AlertService::class)->summary()
-                : ['low_stock' => 0, 'warranties_near_expiry' => 0],
+                : ['low_stock' => 0, 'fiado_overdue' => 0],
             'flash' => fn () => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

@@ -16,9 +16,11 @@ class Sale extends Model
     public const PAYMENT_PIX = 'pix';
     public const PAYMENT_CREDIT = 'credit';
     public const PAYMENT_DEBIT = 'debit';
+    public const PAYMENT_FIADO = 'fiado';
 
     public const STATUS_OPEN = 'open';
     public const STATUS_PAID = 'paid';
+    public const STATUS_PENDING = 'pending'; // fiado em aberto
     public const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
@@ -34,6 +36,8 @@ class Sale extends Model
         'change_due',
         'status',
         'paid_at',
+        'due_date',
+        'amount_paid',
         'notes',
     ];
 
@@ -45,7 +49,9 @@ class Sale extends Model
             'total' => 'decimal:2',
             'amount_received' => 'decimal:2',
             'change_due' => 'decimal:2',
+            'amount_paid' => 'decimal:2',
             'paid_at' => 'datetime',
+            'due_date' => 'date',
         ];
     }
 
@@ -62,6 +68,11 @@ class Sale extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SaleItem::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function warranties(): HasMany
@@ -84,6 +95,37 @@ class Sale extends Model
         return $q->whereDate('paid_at', today());
     }
 
+    /** Vendas no fiado ainda em aberto (saldo devedor > 0). */
+    public function scopeFiadoPending(Builder $q): Builder
+    {
+        return $q->where('payment_method', self::PAYMENT_FIADO)
+                 ->where('status', self::STATUS_PENDING);
+    }
+
+    /** Fiado pendente já vencido. */
+    public function scopeOverdue(Builder $q): Builder
+    {
+        return $q->fiadoPending()->whereDate('due_date', '<', today());
+    }
+
+    /** Saldo ainda devido nesta venda. */
+    public function remaining(): float
+    {
+        return max(0, round((float) $this->total - (float) $this->amount_paid, 2));
+    }
+
+    public function isFiado(): bool
+    {
+        return $this->payment_method === self::PAYMENT_FIADO;
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->status === self::STATUS_PENDING
+            && $this->due_date
+            && $this->due_date->isPast();
+    }
+
     public function paymentLabel(): string
     {
         return match ($this->payment_method) {
@@ -91,6 +133,7 @@ class Sale extends Model
             self::PAYMENT_PIX => 'PIX',
             self::PAYMENT_CREDIT => 'Cartão Crédito',
             self::PAYMENT_DEBIT => 'Cartão Débito',
+            self::PAYMENT_FIADO => 'Fiado',
             default => $this->payment_method,
         };
     }

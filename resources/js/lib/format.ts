@@ -38,9 +38,16 @@ export function paymentLabel(method: string): string {
         pix: 'PIX',
         credit: 'Cartão Crédito',
         debit: 'Cartão Débito',
+        fiado: 'Fiado',
+        other: 'Outro',
     } as Record<string, string>)[method] ?? method;
 }
 
-export function warrantyStatusLabel(s: string): string {
-    return ({ active: 'Ativa', expired: 'Vencida', used: 'Utilizada' } as Record<string, string>)[s] ?? s;
+export function saleStatusLabel(s: string): string {
+    return ({
+        open: 'Aberta',
+        paid: 'Paga',
+        pending: 'Fiado em aberto',
+        cancelled: 'Cancelada',
+    } as Record<string, string>)[s] ?? s;
 }

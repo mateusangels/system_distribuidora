@@ -44,7 +44,7 @@ class SaleController extends Controller
 
     public function show(Sale $sale): Response
     {
-        $sale->load(['items', 'customer', 'user', 'warranties.product']);
+        $sale->load(['items', 'customer', 'user', 'payments']);
         return Inertia::render('Sales/Show', ['sale' => $sale]);
     }
 

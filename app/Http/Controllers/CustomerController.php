@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCustomerRequest;
 use App\Models\Customer;
+use App\Models\Sale;
+use App\Services\WhatsappService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -36,15 +38,38 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('success', 'Cliente cadastrado!');
     }
 
-    public function show(Customer $customer): Response
+    public function show(Customer $customer, WhatsappService $whatsapp): Response
     {
         $customer->load([
-            'sales' => fn ($q) => $q->latest('paid_at')->limit(20),
+            'sales' => fn ($q) => $q->latest('id')->limit(20),
             'sales.items',
-            'warranties.product',
+            'payments' => fn ($q) => $q->latest('paid_at')->limit(20),
+            'payments.user:id,name',
         ]);
 
-        return Inertia::render('Customers/Show', ['customer' => $customer]);
+        $pendingSales = $customer->sales()
+            ->fiadoPending()
+            ->orderByRaw('COALESCE(due_date, created_at) asc')
+            ->get();
+
+        return Inertia::render('Customers/Show', [
+            'customer' => $customer,
+            'fiado' => [
+                'outstanding' => $customer->outstandingBalance(),
+                'available_credit' => $customer->availableCredit(),
+                'pending_sales' => $pendingSales->map(fn (Sale $s) => [
+                    'id' => $s->id,
+                    'code' => $s->code,
+                    'total' => (float) $s->total,
+                    'amount_paid' => (float) $s->amount_paid,
+                    'remaining' => $s->remaining(),
+                    'due_date' => $s->due_date?->toDateString(),
+                    'overdue' => $s->isOverdue(),
+                    'created_at' => $s->created_at?->toDateString(),
+                ]),
+                'whatsapp' => $whatsapp->buildCharge($customer),
+            ],
+        ]);
     }
 
     public function edit(Customer $customer): RedirectResponse
@@ -65,13 +90,24 @@ class CustomerController extends Controller
         return back()->with('success', 'Cliente removido.');
     }
 
-    /** AJAX para autocomplete no PDV. */
+    /** AJAX para autocomplete no PDV. Inclui saldo/limite p/ vendas no fiado. */
     public function search(Request $request)
     {
+        $customers = Customer::search($request->string('q')->toString())
+            ->limit(10)
+            ->get(['id', 'name', 'document', 'phone', 'whatsapp', 'credit_limit']);
+
         return response()->json(
-            Customer::search($request->string('q')->toString())
-                ->limit(10)
-                ->get(['id', 'name', 'document', 'phone', 'whatsapp'])
+            $customers->map(fn (Customer $c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'document' => $c->document,
+                'phone' => $c->phone,
+                'whatsapp' => $c->whatsapp,
+                'credit_limit' => (float) $c->credit_limit,
+                'outstanding' => $c->outstandingBalance(),
+                'available_credit' => $c->availableCredit(),
+            ])
         );
     }
 }

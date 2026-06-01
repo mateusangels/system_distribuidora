@@ -3,11 +3,11 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FiadoController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\SaleController;
-use App\Http\Controllers\WarrantyController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +33,11 @@ Route::middleware(['auth'])->group(function () {
     // Cupom
     Route::get('/sales/{sale}/receipt', [ReceiptController::class, 'show'])->name('receipts.show');
 
+    // Fiado / contas a receber
+    Route::get('/fiado', [FiadoController::class, 'index'])->name('fiado.index');
+    Route::post('/customers/{customer}/payments', [FiadoController::class, 'storePayment'])
+        ->name('fiado.payment');
+
     // Customers
     Route::get('/customers/search', [CustomerController::class, 'search'])->name('customers.search');
     Route::resource('customers', CustomerController::class);
@@ -45,16 +50,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/products/{product}/stock', [ProductController::class, 'adjustStock'])
         ->name('products.stock.adjust');
     Route::resource('products', ProductController::class);
-
-    // Categories (apenas criação via AJAX do form de produto)
-    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
-
-    // Warranties
-    Route::get('/warranties', [WarrantyController::class, 'index'])->name('warranties.index');
-    Route::post('/warranties/{warranty}/used', [WarrantyController::class, 'markUsed'])
-        ->name('warranties.used');
-    Route::post('/warranties/{warranty}/notify', [WarrantyController::class, 'notify'])
-        ->name('warranties.notify');
 });
 
 require __DIR__ . '/auth.php';

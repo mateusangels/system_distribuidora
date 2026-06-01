@@ -1,13 +1,15 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 import Input from '@/Components/ui/Input';
 import Button from '@/Components/ui/Button';
 import { Card, CardBody, CardFooter } from '@/Components/ui/Card';
-import MotorcycleLogo from '@/Components/ui/MotorcycleLogo';
+import BrandLogo from '@/Components/ui/BrandLogo';
 import Icon from '@/Components/ui/Icon';
 import { useTheme } from '@/hooks/use-theme';
+import type { PageProps } from '@/types';
 
 export default function Login({ status }: { status?: string; canResetPassword?: boolean }) {
+    const store = usePage<PageProps>().props.store;
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -37,10 +39,10 @@ export default function Login({ status }: { status?: string; canResetPassword?: 
             <div className="w-full max-w-md">
                 <div className="mb-6 text-center">
                     <div className="mx-auto mb-2 flex justify-center">
-                        <MotorcycleLogo size={120} animated />
+                        <BrandLogo size={120} animated />
                     </div>
-                    <h1 className="text-2xl font-bold">DUAS RODAS</h1>
-                    <p className="text-sm text-ink-500 dark:text-ink-400">Sistema de Gestão · Loja do Diogo</p>
+                    <h1 className="text-2xl font-bold">{store?.name ?? 'Adega Responsa'}</h1>
+                    <p className="text-sm text-ink-500 dark:text-ink-400">{store?.tagline ?? 'Distribuidora de Bebidas · GO'}</p>
                 </div>
 
                 <Card>

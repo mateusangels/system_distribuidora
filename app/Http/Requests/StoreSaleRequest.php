@@ -27,9 +27,20 @@ class StoreSaleRequest extends FormRequest
                 Sale::PAYMENT_PIX,
                 Sale::PAYMENT_CREDIT,
                 Sale::PAYMENT_DEBIT,
+                Sale::PAYMENT_FIADO,
             ])],
             'payment.amount_received' => ['nullable', 'numeric', 'min:0'],
             'payment.discount' => ['nullable', 'numeric', 'min:0'],
+            'payment.due_date' => ['nullable', 'date'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if ($this->input('payment.method') === Sale::PAYMENT_FIADO && !$this->filled('customer_id')) {
+                $validator->errors()->add('customer_id', 'Venda no fiado exige um cliente cadastrado.');
+            }
+        });
     }
 }

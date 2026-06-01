@@ -21,6 +21,7 @@ class StoreCustomerRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'credit_limit' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

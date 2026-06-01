@@ -19,7 +19,6 @@ interface Props {
         q: string;
         category_id: number | null;
         stock: 'out' | 'low' | 'ok' | null;
-        warranty: 'with' | 'without' | null;
     };
 }
 
@@ -29,7 +28,6 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
     const [q, setQ] = useState(filters.q ?? '');
     const [cat, setCat] = useState<string>(filters.category_id ? String(filters.category_id) : '');
     const [stock, setStock] = useState<string>(filters.stock ?? '');
-    const [warranty, setWarranty] = useState<string>(filters.warranty ?? '');
     const [editing, setEditing] = useState<Product | null | 'new'>(null);
 
     // Abre o modal automaticamente quando vem de /products/create ou /products/{id}/edit
@@ -56,16 +54,15 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
             q,
             category_id: cat || undefined,
             stock: stock || undefined,
-            warranty: warranty || undefined,
         }, { preserveState: true, replace: true });
     };
 
     const resetFilters = () => {
-        setQ(''); setCat(''); setStock(''); setWarranty('');
+        setQ(''); setCat(''); setStock('');
         router.get('/products', {}, { preserveState: false, replace: true });
     };
 
-    const hasFilter = !!(q || cat || stock || warranty);
+    const hasFilter = !!(q || cat || stock);
 
     const remove = (id: number) => {
         if (!confirm('Remover este produto? (Se tiver histórico, apenas será inativado)')) return;
@@ -99,11 +96,6 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                             <option value="out">Sem estoque</option>
                             <option value="low">Estoque baixo</option>
                             <option value="ok">Estoque OK</option>
-                        </Select>
-                        <Select value={warranty} onChange={(e) => setWarranty(e.target.value)} title="Garantia">
-                            <option value="">Todas garantias</option>
-                            <option value="with">Com garantia</option>
-                            <option value="without">Sem garantia</option>
                         </Select>
                         <Button type="submit" variant="secondary">
                             <Icon name="mdi:filter-outline" className="h-4 w-4" />

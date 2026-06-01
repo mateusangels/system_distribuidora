@@ -19,13 +19,13 @@ class ProductionSeeder extends Seeder
 {
     public function run(): void
     {
-        $email = env('ADMIN_EMAIL', 'admin@duasrodas.local');
+        $email = env('ADMIN_EMAIL', 'admin@distribuidora.com.br');
 
         $admin = User::firstOrCreate(
             ['email' => $email],
             [
                 'name' => env('ADMIN_NAME', 'Administrador'),
-                'password' => env('ADMIN_PASSWORD', 'admin123'),
+                'password' => env('ADMIN_PASSWORD', 'admin1234'),
                 'role' => User::ROLE_ADMIN,
                 'email_verified_at' => now(),
             ]

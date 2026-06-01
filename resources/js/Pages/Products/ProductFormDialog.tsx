@@ -233,9 +233,9 @@ export default function ProductFormDialog({ open, product, categories, onClose }
                 {/* ---------- Estoque ---------- */}
                 <section>
                     <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
-                        Estoque & garantia
+                        Estoque
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <Input
                             label="Estoque atual *"
                             type="number"
@@ -251,14 +251,6 @@ export default function ProductFormDialog({ open, product, categories, onClose }
                             onChange={(e) => setData('min_stock_qty', parseInt(e.target.value) || 0)}
                             error={errors.min_stock_qty}
                             required
-                        />
-                        <Input
-                            label="Garantia (dias)"
-                            type="number"
-                            value={data.warranty_days as any}
-                            onChange={(e) => setData('warranty_days', parseInt(e.target.value) || 0)}
-                            hint="0 = sem garantia"
-                            error={errors.warranty_days}
                         />
                     </div>
                 </section>

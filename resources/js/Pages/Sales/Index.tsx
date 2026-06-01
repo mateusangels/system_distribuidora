@@ -6,7 +6,8 @@ import Badge from '@/Components/ui/Badge';
 import Button from '@/Components/ui/Button';
 import Input from '@/Components/ui/Input';
 import Select from '@/Components/ui/Select';
-import { brl, dateTimeBr, paymentLabel } from '@/lib/format';
+import Icon from '@/Components/ui/Icon';
+import { brl, dateTimeBr, paymentLabel, saleStatusLabel } from '@/lib/format';
 import type { Paginated, Sale, Customer, User } from '@/types';
 import { useState } from 'react';
 
@@ -32,6 +33,7 @@ export default function SalesIndex({ sales, filters }: Props) {
                         <Select value={status} onChange={(e) => setStatus(e.target.value)} title="Status">
                             <option value="">Todos status</option>
                             <option value="paid">Pagas</option>
+                            <option value="pending">Fiado em aberto</option>
                             <option value="cancelled">Canceladas</option>
                         </Select>
                         <Button type="submit" variant="secondary">Filtrar</Button>
@@ -51,6 +53,7 @@ export default function SalesIndex({ sales, filters }: Props) {
                                     <TH>Pagamento</TH>
                                     <TH>Status</TH>
                                     <TH className="text-right">Total</TH>
+                                    <TH className="text-center w-20">Cupom</TH>
                                 </TR>
                             </THead>
                             <TBody>
@@ -59,20 +62,31 @@ export default function SalesIndex({ sales, filters }: Props) {
                                         <TD>
                                             <Link href={`/sales/${s.id}`} className="font-mono text-brand-600 hover:underline dark:text-brand-300">{s.code}</Link>
                                         </TD>
-                                        <TD>{dateTimeBr(s.paid_at ?? null)}</TD>
+                                        <TD>{dateTimeBr(s.paid_at ?? s.created_at ?? null)}</TD>
                                         <TD>{s.customer?.name ?? <span className="text-ink-400">consumidor</span>}</TD>
                                         <TD>{s.user?.name}</TD>
                                         <TD>{paymentLabel(s.payment_method)}</TD>
                                         <TD>
                                             <Badge tone={s.status === 'paid' ? 'success' : s.status === 'cancelled' ? 'danger' : 'warning'}>
-                                                {s.status === 'paid' ? 'Paga' : s.status === 'cancelled' ? 'Cancelada' : 'Aberta'}
+                                                {saleStatusLabel(s.status)}
                                             </Badge>
                                         </TD>
                                         <TD className="text-right font-mono">{brl(s.total)}</TD>
+                                        <TD className="text-center">
+                                            <a
+                                                href={`/sales/${s.id}/receipt?print=1`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                title="Reimprimir cupom"
+                                                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-ink-600 hover:bg-ink-100 hover:text-brand-600 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-brand-300"
+                                            >
+                                                <Icon name="mdi:printer-outline" className="h-5 w-5" />
+                                            </a>
+                                        </TD>
                                     </TR>
                                 ))}
                                 {sales.data.length === 0 && (
-                                    <TR><TD colSpan={7} className="text-center py-10 text-ink-500">Nenhuma venda registrada.</TD></TR>
+                                    <TR><TD colSpan={8} className="text-center py-10 text-ink-500">Nenhuma venda registrada.</TD></TR>
                                 )}
                             </TBody>
                         </Table>

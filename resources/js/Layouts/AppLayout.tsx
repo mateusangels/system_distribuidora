@@ -5,7 +5,7 @@ import type { PageProps } from '@/types';
 import ToastContainer from '@/Components/ui/Toast';
 import Badge from '@/Components/ui/Badge';
 import Icon from '@/Components/ui/Icon';
-import MotorcycleLogo from '@/Components/ui/MotorcycleLogo';
+import BrandLogo from '@/Components/ui/BrandLogo';
 import { useFlash } from '@/hooks/use-flash';
 import { useShortcut } from '@/hooks/use-shortcut';
 import { useTheme } from '@/hooks/use-theme';
@@ -19,9 +19,9 @@ const NAV = [
     { href: '/dashboard', label: 'Dashboard', icon: 'mdi:view-dashboard-outline' },
     { href: '/pdv',       label: 'PDV',       icon: 'mdi:cart-outline', accent: true, hint: 'F1' },
     { href: '/sales',     label: 'Vendas',    icon: 'mdi:receipt-text-outline' },
-    { href: '/products',  label: 'Produtos',  icon: 'mdi:package-variant-closed' },
+    { href: '/fiado',     label: 'Fiado',     icon: 'mdi:notebook-outline' },
+    { href: '/products',  label: 'Produtos',  icon: 'mdi:bottle-soda-classic-outline' },
     { href: '/customers', label: 'Clientes',  icon: 'mdi:account-outline' },
-    { href: '/warranties',label: 'Garantias', icon: 'mdi:shield-check-outline' },
 ];
 
 export default function AppLayout({ title, actions, children }: PropsWithChildren<Props>) {
@@ -47,13 +47,13 @@ export default function AppLayout({ title, actions, children }: PropsWithChildre
     // Fecha sidebar ao mudar de página no mobile
     useEffect(() => { setSidebarOpen(false); }, [url]);
 
-    const totalAlerts = (alerts?.low_stock || 0) + (alerts?.warranties_near_expiry || 0);
+    const totalAlerts = (alerts?.low_stock || 0) + (alerts?.fiado_overdue || 0);
 
     const sidebarContent = (
         <>
             <div className="px-4 py-4 border-b border-ink-200 dark:border-ink-800 flex items-center justify-between">
                 <Link href="/dashboard" className="flex items-center gap-3 min-w-0">
-                    <MotorcycleLogo size={40} animated={false} />
+                    <BrandLogo size={40} />
                     <div className="min-w-0">
                         <div className="text-sm font-bold tracking-wide truncate">{props.store?.name}</div>
                         <div className="text-xs text-ink-500 dark:text-ink-400 truncate">{props.store?.tagline}</div>
@@ -176,7 +176,7 @@ export default function AppLayout({ title, actions, children }: PropsWithChildre
                                     <Icon name="mdi:bell-outline" className="h-4 w-4" />
                                     <span>
                                         {alerts.low_stock > 0 && <Badge tone="danger" className="mr-1">{alerts.low_stock} estoque</Badge>}
-                                        {alerts.warranties_near_expiry > 0 && <Badge tone="warning">{alerts.warranties_near_expiry} garantias</Badge>}
+                                        {alerts.fiado_overdue > 0 && <Badge tone="warning">{alerts.fiado_overdue} fiado vencido</Badge>}
                                     </span>
                                 </Link>
                             )}

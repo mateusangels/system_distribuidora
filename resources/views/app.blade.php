@@ -7,13 +7,13 @@
         <meta name="theme-color" content="#11141c" media="(prefers-color-scheme: dark)">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title inertia>{{ config('app.name', 'DUAS RODAS') }}</title>
+        <title inertia>{{ config('app.name', 'Adega Responsa') }}</title>
 
         {{-- Aplica o tema salvo antes de qualquer render pra evitar flash --}}
         <script>
             (function () {
                 try {
-                    var saved = localStorage.getItem('moto-pecas-theme');
+                    var saved = localStorage.getItem('distri-theme');
                     if (saved === 'dark') {
                         document.documentElement.classList.add('dark');
                     }

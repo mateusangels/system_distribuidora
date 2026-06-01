@@ -12,33 +12,75 @@ interface Props {
     onClose: () => void;
 }
 
+// ---------- Máscaras ----------
+function onlyDigits(value: string) {
+    return value.replace(/\D/g, '');
+}
+
+function formatDocument(value: string) {
+    const digits = onlyDigits(value).slice(0, 14);
+    if (digits.length <= 11) {
+        // CPF: 000.000.000-00
+        return digits
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+    // CNPJ: 00.000.000/0000-00
+    return digits
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
+function formatPhone(value: string) {
+    const digits = onlyDigits(value).slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 6) return digits.replace(/^(\d{2})(\d+)/, '($1) $2');
+    if (digits.length <= 10) return digits.replace(/^(\d{2})(\d{4})(\d+)/, '($1) $2-$3');
+    // celular: (00) 00000-0000
+    return digits.replace(/^(\d{2})(\d{5})(\d{1,4})/, '($1) $2-$3');
+}
+
+const EMPTY = {
+    name: '',
+    document: '',
+    phone: '',
+    whatsapp: '',
+    email: '',
+    address: '',
+    notes: '',
+    credit_limit: '' as string,
+};
+
 export default function CustomerFormDialog({ open, customer, onClose }: Props) {
     const isEdit = !!customer;
-    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
-        name: '',
-        document: '',
-        phone: '',
-        whatsapp: '',
-        email: '',
-        address: '',
-        notes: '',
-    });
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({ ...EMPTY });
 
+    // Sincroniza a cada abertura do modal. A dependência em `open` garante que
+    // mesmo reabrindo pra "Novo cliente" em sequência os dados antigos sumam.
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            // Ao fechar, limpa totalmente o estado pra não "vazar" dados pra próxima abertura.
+            reset();
+            clearErrors();
+            return;
+        }
         clearErrors();
         if (customer) {
             setData({
                 name: customer.name ?? '',
-                document: customer.document ?? '',
-                phone: customer.phone ?? '',
-                whatsapp: customer.whatsapp ?? '',
+                document: customer.document ? formatDocument(customer.document) : '',
+                phone: customer.phone ? formatPhone(customer.phone) : '',
+                whatsapp: customer.whatsapp ? formatPhone(customer.whatsapp) : '',
                 email: customer.email ?? '',
                 address: customer.address ?? '',
                 notes: customer.notes ?? '',
+                credit_limit: customer.credit_limit != null ? String(customer.credit_limit) : '',
             });
         } else {
-            reset();
+            setData({ ...EMPTY });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, customer?.id]);
@@ -47,7 +89,11 @@ export default function CustomerFormDialog({ open, customer, onClose }: Props) {
         e.preventDefault();
         const options = {
             preserveScroll: true,
-            onSuccess: () => onClose(),
+            onSuccess: () => {
+                reset();
+                clearErrors();
+                onClose();
+            },
         };
         if (isEdit) put(`/customers/${customer!.id}`, options);
         else post('/customers', options);
@@ -60,13 +106,45 @@ export default function CustomerFormDialog({ open, customer, onClose }: Props) {
                     <div className="md:col-span-2">
                         <Input label="Nome *" value={data.name} onChange={(e) => setData('name', e.target.value)} error={errors.name} required autoFocus />
                     </div>
-                    <Input label="CPF / CNPJ" value={data.document ?? ''} onChange={(e) => setData('document', e.target.value)} error={errors.document} />
+                    <Input
+                        label="CPF / CNPJ"
+                        value={data.document ?? ''}
+                        onChange={(e) => setData('document', formatDocument(e.target.value))}
+                        error={errors.document}
+                        placeholder="000.000.000-00"
+                        inputMode="numeric"
+                    />
                     <Input label="Email" type="email" value={data.email ?? ''} onChange={(e) => setData('email', e.target.value)} error={errors.email} />
-                    <Input label="Telefone" value={data.phone ?? ''} onChange={(e) => setData('phone', e.target.value)} error={errors.phone} />
-                    <Input label="WhatsApp" value={data.whatsapp ?? ''} onChange={(e) => setData('whatsapp', e.target.value)} error={errors.whatsapp} />
+                    <Input
+                        label="Telefone"
+                        value={data.phone ?? ''}
+                        onChange={(e) => setData('phone', formatPhone(e.target.value))}
+                        error={errors.phone}
+                        placeholder="(00) 00000-0000"
+                        inputMode="tel"
+                    />
+                    <Input
+                        label="WhatsApp"
+                        value={data.whatsapp ?? ''}
+                        onChange={(e) => setData('whatsapp', formatPhone(e.target.value))}
+                        error={errors.whatsapp}
+                        placeholder="(00) 00000-0000"
+                        inputMode="tel"
+                    />
                     <div className="md:col-span-2">
                         <Input label="Endereço" value={data.address ?? ''} onChange={(e) => setData('address', e.target.value)} error={errors.address} />
                     </div>
+                    <Input
+                        label="Limite de crédito (fiado)"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={data.credit_limit ?? ''}
+                        onChange={(e) => setData('credit_limit', e.target.value)}
+                        error={errors.credit_limit}
+                        placeholder="0,00"
+                        hint="0 ou vazio = sem limite definido"
+                    />
                     <div className="md:col-span-2">
                         <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-ink-600 dark:text-ink-300">Observações</label>
                         <textarea

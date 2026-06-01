@@ -42,10 +42,11 @@ export interface Customer {
     email: string | null;
     address: string | null;
     notes: string | null;
+    credit_limit?: string | number;
 }
 
-export type PaymentMethod = 'cash' | 'pix' | 'credit' | 'debit';
-export type SaleStatus = 'open' | 'paid' | 'cancelled';
+export type PaymentMethod = 'cash' | 'pix' | 'credit' | 'debit' | 'fiado';
+export type SaleStatus = 'open' | 'paid' | 'pending' | 'cancelled';
 
 export interface SaleItem {
     id: number;
@@ -73,31 +74,35 @@ export interface Sale {
     change_due: string | null;
     status: SaleStatus;
     paid_at: string | null;
+    due_date: string | null;
+    amount_paid: string;
     notes: string | null;
+    created_at?: string;
     items?: SaleItem[];
     customer?: Customer | null;
     user?: User;
-    warranties?: Warranty[];
+    payments?: Payment[];
 }
 
-export interface Warranty {
+export type PaymentReceiptMethod = 'cash' | 'pix' | 'credit' | 'debit' | 'other';
+
+export interface Payment {
     id: number;
-    sale_item_id: number;
-    sale_id: number;
-    product_id: number;
-    customer_id: number | null;
-    starts_at: string;
-    ends_at: string;
-    status: 'active' | 'expired' | 'used';
+    code: string;
+    customer_id: number;
+    sale_id: number | null;
+    user_id: number;
+    amount: string;
+    method: PaymentReceiptMethod;
+    paid_at: string;
     notes: string | null;
-    product?: { id: number; name: string };
-    customer?: Customer | null;
-    sale?: { id: number; code: string };
+    customer?: Pick<Customer, 'id' | 'name'> | null;
+    user?: Pick<User, 'id' | 'name'>;
 }
 
 export interface Alerts {
     low_stock: number;
-    warranties_near_expiry: number;
+    fiado_overdue: number;
 }
 
 export interface Paginated<T> {

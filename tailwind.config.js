@@ -54,10 +54,40 @@ export default {
                     '0%': { transform: 'translateY(8px)', opacity: 0 },
                     '100%': { transform: 'translateY(0)', opacity: 1 },
                 },
+                // ---- Logo animada (Adega Responsa) ----
+                'logo-bob': {
+                    '0%, 100%': { transform: 'translateY(0) rotate(-2deg)' },
+                    '50%': { transform: 'translateY(-8px) rotate(2deg)' },
+                },
+                'logo-glow': {
+                    '0%, 100%': { transform: 'scale(1)', opacity: '0.35' },
+                    '50%': { transform: 'scale(1.12)', opacity: '0.6' },
+                },
+                'logo-shine': {
+                    '0%': { transform: 'translateX(-140%) skewX(-18deg)', opacity: '0' },
+                    '35%': { opacity: '0.85' },
+                    '65%': { opacity: '0.85' },
+                    '100%': { transform: 'translateX(240%) skewX(-18deg)', opacity: '0' },
+                },
+                'bubble-rise': {
+                    '0%': { transform: 'translateY(0) scale(0.4)', opacity: '0' },
+                    '15%': { opacity: '0.9' },
+                    '80%': { opacity: '0.7' },
+                    '100%': { transform: 'translateY(var(--rise, -110px)) scale(1)', opacity: '0' },
+                },
+                'spin-slow': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' },
+                },
             },
             animation: {
                 'fade-in': 'fade-in 150ms ease-out',
                 'slide-up': 'slide-up 180ms ease-out',
+                'logo-bob': 'logo-bob 4s ease-in-out infinite',
+                'logo-glow': 'logo-glow 3.2s ease-in-out infinite',
+                'logo-shine': 'logo-shine 3.8s ease-in-out infinite',
+                'bubble-rise': 'bubble-rise 2.8s ease-in infinite',
+                'spin-slow': 'spin-slow 14s linear infinite',
             },
         },
     },

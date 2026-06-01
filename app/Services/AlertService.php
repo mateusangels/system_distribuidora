@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\Warranty;
+use App\Models\Sale;
 
 class AlertService
 {
@@ -12,17 +12,17 @@ class AlertService
         return Product::active()->lowStock()->count();
     }
 
-    public function nearExpiryWarrantyCount(?int $days = null): int
+    /** Vendas no fiado pendentes já vencidas. */
+    public function fiadoOverdueCount(): int
     {
-        $days ??= (int) config('store.warranty_near_expiry_days', 7);
-        return Warranty::nearExpiry($days)->count();
+        return Sale::overdue()->count();
     }
 
     public function summary(): array
     {
         return [
             'low_stock' => $this->lowStockCount(),
-            'warranties_near_expiry' => $this->nearExpiryWarrantyCount(),
+            'fiado_overdue' => $this->fiadoOverdueCount(),
         ];
     }
 }

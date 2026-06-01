@@ -8,7 +8,19 @@ import Badge from '@/Components/ui/Badge';
 import Icon from '@/Components/ui/Icon';
 import { brl, num, paymentLabel } from '@/lib/format';
 import { useShortcut } from '@/hooks/use-shortcut';
-import type { Customer, PaymentMethod, Product } from '@/types';
+import type { PaymentMethod, Product } from '@/types';
+
+/** Cliente no PDV — inclui dados de crédito vindos do /customers/search. */
+interface PdvCustomer {
+    id: number;
+    name: string;
+    document: string | null;
+    phone: string | null;
+    whatsapp: string | null;
+    credit_limit?: number;
+    outstanding?: number;
+    available_credit?: number | null;
+}
 
 interface CartItem {
     product_id: number;
@@ -75,11 +87,11 @@ export default function PDV() {
     const [searching, setSearching] = useState(false);
     const [paymentOpen, setPaymentOpen] = useState(false);
     const [customerOpen, setCustomerOpen] = useState(false);
-    const [customer, setCustomer] = useState<Customer | null>(null);
+    const [customer, setCustomer] = useState<PdvCustomer | null>(null);
     const [discount, setDiscount] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [success, setSuccess] = useState<{ code: string; id: number; change: number | null; total: number } | null>(null);
+    const [success, setSuccess] = useState<{ code: string; id: number; change: number | null; total: number; fiado: boolean } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const subtotal = useMemo(() => cart.reduce((s, i) => s + i.unit_price * i.qty, 0), [cart]);
@@ -176,14 +188,15 @@ export default function PDV() {
         dispatch({ type: 'add', product: p });
     };
 
-    const finalize = async (method: PaymentMethod, amountReceived: number | null, customerDoc: string | null) => {
+    const finalize = async (method: PaymentMethod, amountReceived: number | null, customerDoc: string | null, dueDate: string | null) => {
         const payload = {
             customer_id: customer?.id ?? null,
             customer_document: customerDoc || null,
             items: cart.map((i) => ({ product_id: i.product_id, qty: i.qty, unit_price: i.unit_price })),
-            payment: { method, amount_received: amountReceived, discount },
+            payment: { method, amount_received: amountReceived, discount, due_date: dueDate },
         };
 
+        setError(null);
         setSubmitting(true);
         try {
             // Fetch direto (não Inertia) pra NÃO redirecionar pra /sales/{id}.
@@ -207,7 +220,7 @@ export default function PDV() {
                     ? Object.values(body.errors).flat().join(' • ')
                     : body?.message || 'Erro ao finalizar venda.';
                 setError(String(msg));
-                setTimeout(() => setError(null), 3500);
+                // Não auto-limpa aqui — o erro fica visível no modal até o usuário fechar/tentar novamente.
                 return;
             }
 
@@ -215,7 +228,6 @@ export default function PDV() {
             const sale = data.sale;
             if (!sale) {
                 setError('Resposta inválida do servidor.');
-                setTimeout(() => setError(null), 3500);
                 return;
             }
 
@@ -224,6 +236,7 @@ export default function PDV() {
                 id: sale.id,
                 change: sale.change_due != null ? Number(sale.change_due) : null,
                 total: Number(sale.total),
+                fiado: method === 'fiado',
             });
             dispatch({ type: 'clear' });
             setCustomer(null);
@@ -233,7 +246,6 @@ export default function PDV() {
             router.reload({ only: ['alerts'] });
         } catch (e) {
             setError('Erro de rede ao finalizar venda.');
-            setTimeout(() => setError(null), 3500);
         } finally {
             setSubmitting(false);
         }
@@ -254,7 +266,7 @@ export default function PDV() {
             <Head title="PDV" />
 
             {error && (
-                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800 shadow-lg animate-slide-up dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-200">
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800 shadow-lg animate-slide-up dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-200">
                     <Icon name="mdi:alert-circle-outline" className="h-4 w-4" />
                     {error}
                 </div>
@@ -437,7 +449,9 @@ export default function PDV() {
                 total={total}
                 submitting={submitting}
                 defaultDocument={customer?.document ?? ''}
+                customer={customer}
                 onConfirm={finalize}
+                serverError={error}
             />
             <CustomerPicker open={customerOpen} onClose={() => setCustomerOpen(false)} onPick={(c) => { setCustomer(c); setCustomerOpen(false); }} />
 
@@ -459,7 +473,7 @@ function PrintPrompt({
     onPrint,
     onSkip,
 }: {
-    success: { code: string; id: number; change: number | null; total: number } | null;
+    success: { code: string; id: number; change: number | null; total: number; fiado: boolean } | null;
     onPrint: () => void;
     onSkip: () => void;
 }) {
@@ -480,7 +494,7 @@ function PrintPrompt({
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-ink-600 dark:text-ink-300">
                     <Icon name="mdi:check-circle-outline" className="h-5 w-5 text-emerald-500" />
-                    Estoque atualizado, garantias geradas (se aplicável).
+                    {success?.fiado ? 'Registrado no fiado — saldo lançado para o cliente.' : 'Estoque atualizado.'}
                 </div>
 
                 <div className="rounded-lg border border-ink-200 bg-ink-50 px-4 py-3 text-center dark:border-ink-700 dark:bg-ink-950/60">
@@ -525,35 +539,71 @@ const PAYMENT_ICONS: Record<PaymentMethod, string> = {
     pix: 'mdi:qrcode',
     credit: 'mdi:credit-card-outline',
     debit: 'mdi:bank-outline',
+    fiado: 'mdi:notebook-outline',
 };
 
+/** Soma N dias a hoje e devolve no formato YYYY-MM-DD (default do vencimento do fiado). */
+function defaultDueDate(days = 30): string {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+}
+
 function PaymentModal({
-    open, onClose, total, submitting, defaultDocument, onConfirm,
+    open, onClose, total, submitting, defaultDocument, customer, onConfirm, serverError,
 }: {
     open: boolean;
     onClose: () => void;
     total: number;
     submitting: boolean;
     defaultDocument?: string;
-    onConfirm: (method: PaymentMethod, received: number | null, customerDoc: string | null) => void;
+    customer: PdvCustomer | null;
+    onConfirm: (method: PaymentMethod, received: number | null, customerDoc: string | null, dueDate: string | null) => void;
+    serverError?: string | null;
 }) {
     const [method, setMethod] = useState<PaymentMethod>('cash');
     const [received, setReceived] = useState<number>(total);
     const [doc, setDoc] = useState<string>('');
+    const [dueDate, setDueDate] = useState<string>(defaultDueDate());
     const [showDocField, setShowDocField] = useState(false);
+    const [localError, setLocalError] = useState<string | null>(null);
     const change = method === 'cash' ? Math.max(0, received - total) : 0;
+
+    const isFiado = method === 'fiado';
+    const available = customer?.available_credit ?? null;
+    const overLimit = isFiado && available !== null && total > available;
 
     useEffect(() => {
         if (open) {
             setReceived(total);
             setDoc(defaultDocument ?? '');
+            setDueDate(defaultDueDate());
             setShowDocField(!!defaultDocument);
+            setLocalError(null);
+            setMethod('cash');
         }
     }, [open, total, defaultDocument]);
 
     const submit = () => {
-        if (method === 'cash' && received < total) { alert('Valor recebido é menor que o total!'); return; }
-        onConfirm(method, method === 'cash' ? received : null, doc.trim() || null);
+        setLocalError(null);
+        if (isFiado && !customer) {
+            setLocalError('Venda no fiado exige um cliente identificado. Volte e use F2 para escolher.');
+            return;
+        }
+        if (overLimit) {
+            setLocalError(`Limite de crédito insuficiente. Disponível: ${brl(available ?? 0)}.`);
+            return;
+        }
+        if (method === 'cash' && received < total) {
+            setLocalError('Valor recebido é menor que o total da venda.');
+            return;
+        }
+        onConfirm(
+            method,
+            method === 'cash' ? received : null,
+            doc.trim() || null,
+            isFiado ? dueDate : null,
+        );
     };
 
     return (
@@ -564,13 +614,13 @@ function PaymentModal({
                     <div className="text-4xl font-black text-ink-900 dark:text-ink-50 tabular-nums">{brl(total)}</div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                    {(['cash', 'pix', 'credit', 'debit'] as PaymentMethod[]).map((m) => (
+                <div className="grid grid-cols-3 gap-2">
+                    {(['cash', 'pix', 'credit', 'debit', 'fiado'] as PaymentMethod[]).map((m) => (
                         <button
                             key={m}
                             type="button"
                             onClick={() => setMethod(m)}
-                            className={`rounded-lg border px-4 py-3 text-left transition-colors ${
+                            className={`rounded-lg border px-3 py-3 text-left transition-colors ${
                                 method === m
                                     ? 'border-brand-500 bg-brand-50 text-ink-900 dark:bg-brand-500/15 dark:text-ink-50'
                                     : 'border-ink-200 bg-white text-ink-700 hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-300 dark:hover:bg-ink-800'
@@ -581,6 +631,42 @@ function PaymentModal({
                         </button>
                     ))}
                 </div>
+
+                {isFiado && (
+                    <div className="space-y-2">
+                        {customer ? (
+                            <div className="rounded-lg border border-ink-200 bg-ink-50/60 p-3 dark:border-ink-800 dark:bg-ink-950/50">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-ink-600 dark:text-ink-300">Cliente</span>
+                                    <span className="font-medium">{customer.name}</span>
+                                </div>
+                                <div className="mt-1 flex items-center justify-between text-sm">
+                                    <span className="text-ink-600 dark:text-ink-300">Saldo devedor atual</span>
+                                    <span className="font-mono">{brl(customer.outstanding ?? 0)}</span>
+                                </div>
+                                {available !== null && (
+                                    <div className="mt-1 flex items-center justify-between text-sm">
+                                        <span className="text-ink-600 dark:text-ink-300">Crédito disponível</span>
+                                        <span className={`font-mono font-semibold ${overLimit ? 'text-red-600 dark:text-red-300' : 'text-emerald-600 dark:text-emerald-300'}`}>
+                                            {brl(available)}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-200">
+                                <Icon name="mdi:account-alert-outline" className="h-4 w-4 mt-0.5 shrink-0" />
+                                <span>Identifique o cliente (F2) antes de vender no fiado.</span>
+                            </div>
+                        )}
+                        <Input
+                            label="Vencimento"
+                            type="date"
+                            value={dueDate}
+                            onChange={(e) => setDueDate(e.target.value)}
+                        />
+                    </div>
+                )}
 
                 {method === 'cash' && (
                     <div className="space-y-2">
@@ -623,11 +709,18 @@ function PaymentModal({
                     )}
                 </div>
 
+                {(localError || serverError) && (
+                    <div className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-200">
+                        <Icon name="mdi:alert-circle-outline" className="h-4 w-4 mt-0.5 shrink-0" />
+                        <span>{localError || serverError}</span>
+                    </div>
+                )}
+
                 <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" onClick={onClose} disabled={submitting}>Cancelar (Esc)</Button>
-                    <Button onClick={submit} size="lg" disabled={submitting}>
+                    <Button onClick={submit} size="lg" disabled={submitting || (isFiado && (!customer || overLimit))}>
                         <Icon name={submitting ? 'mdi:loading' : 'mdi:check'} className={`h-5 w-5 ${submitting ? 'animate-spin' : ''}`} />
-                        {submitting ? 'Registrando…' : 'Confirmar pagamento'}
+                        {submitting ? 'Registrando…' : isFiado ? 'Lançar no fiado' : 'Confirmar pagamento'}
                     </Button>
                 </div>
             </div>
@@ -640,10 +733,10 @@ function CustomerPicker({
 }: {
     open: boolean;
     onClose: () => void;
-    onPick: (c: Customer) => void;
+    onPick: (c: PdvCustomer) => void;
 }) {
     const [q, setQ] = useState('');
-    const [results, setResults] = useState<Customer[]>([]);
+    const [results, setResults] = useState<PdvCustomer[]>([]);
 
     useEffect(() => {
         if (!open) return;
@@ -671,7 +764,12 @@ function CustomerPicker({
                         >
                             <div>
                                 <div className="font-medium">{c.name}</div>
-                                <div className="text-xs text-ink-500">{c.document || c.email}</div>
+                                <div className="text-xs text-ink-500">
+                                    {c.document || '—'}
+                                    {(c.outstanding ?? 0) > 0 && (
+                                        <span className="ml-2 text-amber-600 dark:text-amber-300">fiado: {brl(c.outstanding ?? 0)}</span>
+                                    )}
+                                </div>
                             </div>
                             <Badge tone="default">{c.whatsapp ?? c.phone ?? '—'}</Badge>
                         </button>

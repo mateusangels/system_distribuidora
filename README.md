@@ -1,142 +1,110 @@
-# 🏍️ DUAS RODAS — Sistema de Gestão (Moto Peças)
+# 🍺 Distribuidora — Sistema de Gestão (Bebidas)
 
-Sistema completo de gestão para loja de autopeças de motos do cliente **Diogo**.
-Foco em PDV rápido, controle de estoque, clientes e garantias.
+Sistema completo de gestão para **distribuidora de bebidas**: PDV rápido, controle de
+estoque, clientes, **fiado (vendas a prazo)** com **cobrança via WhatsApp** e dashboard animado.
 
-> Projeto desenvolvido por **Angels** · Stack: Laravel 11 + Inertia.js + React + TypeScript + MySQL · Preparado para deploy em **Hostinger**.
+> Stack: Laravel 11 + Inertia.js + React + TypeScript + MySQL · Preparado para deploy em **Hostinger**.
 
 ---
 
 ## ✨ Funcionalidades
 
 ### 🛒 PDV (Ponto de Venda)
-- Interface estilo caixa de mercado, otimizada pra uso rápido no balcão
+- Interface estilo caixa, otimizada pra balcão
 - Leitura de código de barras (scanner USB que emula teclado)
 - Busca por nome / SKU / barcode com autocomplete
-- Atalhos de teclado: `F1` PDV · `F2` Cliente · `F4` Finalizar · `F8` Limpar · `Esc` Limpar busca
-- Carrinho com ajuste de quantidade inline
-- Modal de pagamento (Dinheiro / PIX / Crédito / Débito) com cálculo de troco
-- Geração instantânea de cupom não-fiscal (HTML + ESC/POS)
+- Atalhos: `F1` PDV · `F2` Cliente · `F4` Finalizar · `F8` Limpar · `Esc` Limpar busca
+- Pagamento: **Dinheiro / PIX / Crédito / Débito / Fiado** com cálculo de troco
+- Cupom não-fiscal instantâneo (HTML + ESC/POS)
+
+### 📓 Fiado (contas a receber) ⭐
+- Venda no fiado exige cliente e respeita o **limite de crédito** dele
+- Saldo devedor por cliente calculado em tempo real
+- **Recebimentos** abatem o saldo com alocação **FIFO** (quita as vendas mais antigas primeiro)
+- Painel `/fiado`: total a receber, valor vencido, ranking de devedores e últimos recebimentos
+- **Cobrança via WhatsApp**: gera a mensagem pronta com o resumo da dívida e abre o
+  `wa.me` com o texto preenchido (sem custo, sem API). Arquitetura preparada pra plugar
+  envio automático (Evolution / Cloud API) depois.
 
 ### 📦 Estoque
-- Cadastro de produtos: nome, SKU, código de barras, categoria, custo, preço, garantia
-- Débito automático de estoque ao vender (com **lock pessimista** — sem overselling em concorrência)
-- Histórico completo de movimentações (entradas, saídas, ajustes)
-- Alerta visual de estoque baixo configurável por produto
+- Cadastro de produtos: nome, SKU, código de barras, categoria, custo, preço
+- Débito automático ao vender (com **lock pessimista** — sem overselling em concorrência)
+- Histórico de movimentações (entradas, saídas, ajustes)
+- Alerta de estoque baixo configurável por produto
 
 ### 👤 Clientes
-- Cadastro completo (CPF/CNPJ, telefone, WhatsApp, email, endereço)
-- Histórico de compras por cliente
-- Busca rápida para identificar no PDV
+- Cadastro completo (CPF/CNPJ, telefone, WhatsApp, email, endereço) + **limite de crédito**
+- Perfil com saldo de fiado, vendas em aberto, histórico de compras e de recebimentos
 
-### 🛡️ Garantias
-- Criação automática ao vender produtos com garantia configurada
-- Vínculo automático cliente ↔ produto ↔ venda
-- Alerta de garantias vencendo em ≤ 7 dias (configurável)
-- Notificação simulada via WhatsApp
+### 📊 Dashboard (animado)
+- Vendas do dia · faturamento do período · **a receber (fiado)** · estoque baixo
+- Números com animação de contagem (count-up) e cards com fade-in
+- Faturamento diário (área), vendas por categoria (donut), top 5 produtos (barras)
+- Maiores devedores do fiado
 
-### 📊 Dashboard
-- Vendas do dia · acumulado do mês · contador de alertas
-- Top 5 produtos mais vendidos (últimos 30 dias)
-- Lista de estoque baixo e garantias vencendo
-
-### 🖨️ Cupom fiscal
-- HTML imprimível (`@media print` em 80mm)
-- Saída raw ESC/POS pra impressora térmica (init · center · bold · cut)
-- Compatível com daemons locais tipo PrintNode
+### 🖨️ Cupom
+- HTML imprimível (`@media print` em 80mm) + saída raw ESC/POS pra impressora térmica
 
 ---
 
 ## 🧱 Arquitetura
 
 ```
-Moto_Pecas/
-├─ app/
-│  ├─ Http/
-│  │  ├─ Controllers/       Dashboard, Product, Customer, Sale, Warranty, Receipt
-│  │  ├─ Middleware/        HandleInertiaRequests (shared props)
-│  │  └─ Requests/          Form requests (validação)
-│  ├─ Models/               User, Product, Customer, Sale, SaleItem, StockMovement, Warranty, Category
-│  └─ Services/             SaleService, StockService, ReceiptPrinter, AlertService
-├─ config/store.php         Configs da loja (nome, CNPJ, endereço…)
-├─ database/
-│  ├─ migrations/           7 migrations de domínio (2026_04_13_*)
-│  └─ seeders/              DatabaseSeeder (2 users, 20 produtos, 5 clientes, 3 vendas demo)
-├─ resources/
-│  ├─ js/
-│  │  ├─ Components/ui/     Button, Input, Card, Table, Dialog, Badge, Toast
-│  │  ├─ hooks/             use-shortcut, use-flash
-│  │  ├─ Layouts/           AppLayout (sidebar + topbar dark)
-│  │  ├─ lib/format.ts      brl(), dateBr(), cn() etc
-│  │  ├─ Pages/
-│  │  │  ├─ Auth/Login      Tema dark customizado
-│  │  │  ├─ Dashboard       Métricas + top produtos + alertas
-│  │  │  ├─ Products/       Index + Form (admin)
-│  │  │  ├─ Customers/      Index + Form + Show (histórico)
-│  │  │  ├─ Sales/          Index, Show, PDV ⭐
-│  │  │  └─ Warranties/     Index + notificar + marcar usada
-│  │  └─ types/             Tipagem compartilhada (Product, Sale, etc.)
-│  ├─ css/app.css           Tailwind + Inter + dark theme
-│  └─ views/
-│     ├─ app.blade.php      Root Inertia
-│     └─ receipts/show      Cupom HTML imprimível
-├─ routes/web.php           Rotas Inertia (tudo auth-protected)
-└─ .env.example             Template de configuração
+app/
+├─ Http/
+│  ├─ Controllers/   Dashboard, Product, Customer, Sale, Fiado, Receipt
+│  ├─ Middleware/     HandleInertiaRequests (shared props: store, alerts)
+│  └─ Requests/       Form requests (validação)
+├─ Models/            User, Product, Customer, Sale, SaleItem, StockMovement, Payment, Category
+└─ Services/          SaleService, FiadoService, WhatsappService, StockService, ReceiptPrinter, AlertService
+config/store.php       Configs da loja (nome, endereço, vencimento padrão do fiado…)
+database/
+├─ migrations/         Domínio + fiado (credit_limit, sales.due_date/amount_paid, payments)
+└─ seeders/            DatabaseSeeder (catálogo de bebidas, clientes, vendas demo + fiado)
+resources/js/
+├─ Components/ui/      Button, Input, Card, Table, Dialog, Badge, Select, BrandLogo, Chart
+├─ Layouts/AppLayout   Sidebar + topbar (Dashboard, PDV, Vendas, Fiado, Produtos, Clientes)
+├─ Pages/
+│  ├─ Dashboard        Métricas animadas + gráficos + devedores
+│  ├─ Sales/           Index, Show, PDV ⭐
+│  ├─ Fiado/Index      Painel de contas a receber
+│  ├─ Products/        Index (+ modal de cadastro)
+│  └─ Customers/       Index (+ modal) + Show (saldo, recebimento, cobrança)
+└─ types/              Tipagem compartilhada
+routes/web.php         Rotas Inertia (auth-protected)
 ```
 
-### Fluxo de uma venda
+### Modelo do fiado
 
-```
-[Scanner bipa código] → POST /sales (JSON)
-   └─ StoreSaleRequest (valida)
-       └─ SaleService::createSale() em transação
-           ├─ cria sale (status open)
-           ├─ pra cada item:
-           │    ├─ lockForUpdate no product
-           │    ├─ cria sale_item (snapshot de nome/sku/preço)
-           │    ├─ StockService::move(OUT) + balance_after
-           │    └─ cria warranty (se warranty_days > 0)
-           └─ atualiza sale (total, paid, change_due, status=paid)
-   └─ Resposta JSON ao frontend
-   └─ Modal de troco + botão "Imprimir cupom"
-```
+- Venda com `payment_method = 'fiado'` fica com `status = 'pending'` e um `due_date`.
+- `customers.credit_limit` define o teto; `outstandingBalance()` = Σ(`total − amount_paid`)
+  das vendas fiado pendentes; `availableCredit()` = limite − saldo.
+- `payments` registra cada recebimento; o `FiadoService` aloca o valor FIFO nas vendas
+  mais antigas, incrementando `sales.amount_paid` e marcando como `paid` quando quitada.
+- `WhatsappService::buildCharge()` monta o texto da cobrança + link `wa.me`.
 
 ---
 
-## 🚀 Setup local (XAMPP Windows)
+## 🚀 Setup local
 
 ### Pré-requisitos
-
-| Ferramenta | Versão mínima |
-|---|---|
-| PHP | 8.2 |
-| Composer | 2.x |
-| Node | 20+ |
-| MySQL / MariaDB | 10.x (vem com XAMPP) |
-
-### Passos
+PHP 8.2+ · Composer 2 · Node 20+ · MySQL/MariaDB 10+
 
 ```bash
-# 1. Clonar
-git clone https://github.com/mateusangels/Moto_Pe-as.git
-cd Moto_Pe-as
+git clone https://github.com/mateusangels/system_distribuidora.git
+cd system_distribuidora
 
-# 2. Dependências
 composer install
-npm install --legacy-peer-deps
+npm install
 
-# 3. Env
 cp .env.example .env
 php artisan key:generate
-# edite .env se precisar (DB, dados da loja, etc)
+# ajuste o STORE_NAME e dados do banco no .env
 
-# 4. Database
-# Inicie o MySQL do XAMPP (Control Panel ou C:\xampp\mysql_start.bat)
-mysql -uroot -e "CREATE DATABASE moto_pecas CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -uroot -e "CREATE DATABASE distribuidora_local CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 php artisan migrate --seed
 
-# 5. Assets + servidor
-npm run dev      # terminal 1 (hot reload)
+npm run dev        # terminal 1 (hot reload)
 php artisan serve  # terminal 2 (http://127.0.0.1:8000)
 ```
 
@@ -144,86 +112,28 @@ php artisan serve  # terminal 2 (http://127.0.0.1:8000)
 
 | Perfil | Email | Senha |
 |---|---|---|
-| Admin | `admin@duasrodas.local` | `admin123` |
-| Caixa | `caixa@duasrodas.local` | `caixa123` |
+| Admin | `admin@distribuidora.com.br` | `admin1234` |
 
-Depois de logar, abra `http://127.0.0.1:8000/pdv` e bipe o código `7891000300018` pra testar.
+Abra `/pdv` e bipe `7891991010001` (Skol Lata) pra testar. Pra testar o fiado, escolha um
+cliente (F2) e a forma de pagamento **Fiado** no checkout.
 
 ---
 
-## 🌐 Deploy na Hostinger (compartilhada)
-
-### 1. Preparar pacote local
+## 🌐 Deploy na Hostinger
 
 ```bash
 npm run build
 composer install --no-dev --optimize-autoloader
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan config:cache && php artisan route:cache && php artisan view:cache
 ```
 
-### 2. No painel Hostinger
+1. Crie o banco MySQL pelo painel e anote as credenciais
+2. Suba o projeto (File Manager / SFTP) com a pasta `public` apontada pro `public_html`
+3. Configure o `.env` de produção (incluindo `STORE_NAME`, `APP_URL`) e rode `php artisan key:generate`
+4. Via SSH: `php artisan migrate --force` (e `db:seed --force` se quiser dados demo)
 
-1. Criar banco MySQL (ex: `u123_motopecas`) pelo painel
-2. Criar usuário MySQL e anotar credenciais
-3. Subir todos os arquivos via **File Manager** ou **FTP/SFTP** pra `domains/seudominio/` (fora do public_html)
-
-### 3. Apontar `public_html`
-
-**Opção A — renomear `public/` pra `public_html/`** (método clássico):
-```bash
-# Na Hostinger, sua árvore deve ficar assim:
-/home/u123/
-├── domains/seudominio.com/
-│   └── laravel/       <-- TODO o projeto menos a pasta public
-└── public_html/       <-- conteúdo da pasta public do Laravel
-```
-
-No `public_html/index.php`, ajuste os 2 `require`s pra apontar pro `laravel/`:
-```php
-require __DIR__.'/../domains/seudominio.com/laravel/vendor/autoload.php';
-$app = require_once __DIR__.'/../domains/seudominio.com/laravel/bootstrap/app.php';
-```
-
-**Opção B — .htaccess na raiz** (mais simples):
-Coloque tudo em `public_html/` e crie um `.htaccess` na raiz:
-```apache
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^(.*)$ public/$1 [L]
-</IfModule>
-```
-
-### 4. `.env` de produção
-
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://seudominio.com
-
-DB_HOST=localhost
-DB_DATABASE=u123_motopecas
-DB_USERNAME=u123_diogo
-DB_PASSWORD=***
-
-SESSION_DRIVER=database
-```
-
-### 5. Rodar migrations em produção (uma vez)
-
-Via **SSH** no painel Hostinger:
-```bash
-php artisan migrate --force
-php artisan db:seed --force   # se quiser dados demo
-```
-
-### 6. Cron (opcional)
-
-Se quiser agendamento automático de expiração de garantias etc:
-```
-* * * * * cd /home/u123/domains/seudominio.com/laravel && php artisan schedule:run >> /dev/null 2>&1
-```
+> O `.env.example` traz `STORE_NAME`, `STORE_TAGLINE` e `FIADO_DUE_DAYS_DEFAULT` (vencimento
+> padrão do fiado, em dias).
 
 ---
 
@@ -232,40 +142,24 @@ Se quiser agendamento automático de expiração de garantias etc:
 | Tecla | Ação |
 |---|---|
 | `F1` | Ir pro PDV |
-| `F2` | Abrir busca de cliente |
-| `F4` | Finalizar / abrir pagamento |
+| `F2` | Buscar cliente |
+| `F4` | Finalizar / pagamento |
 | `F8` | Limpar carrinho |
-| `Esc` | Limpar campo de busca |
-| `Enter` no campo busca | Buscar exato (ideal pra scanner) |
-| `+` / `−` no item | Ajustar quantidade |
-
----
-
-## 🔒 Segurança
-
-- Auth via sessões Laravel (CSRF + SameSite cookies)
-- Bcrypt 12 rounds (configurável em `.env`)
-- Form Requests validam TODO input de usuário
-- Transações DB + lock pessimista previnem overselling
-- Role-based (admin vs caixa): caixa só vê PDV/listagens, admin gerencia produtos
-- Inertia preserva CSRF automaticamente via `XSRF-TOKEN` cookie
+| `Esc` | Limpar busca |
 
 ---
 
 ## 🗺️ Próximas iterações
 
-- [ ] Multi-loja (adicionar `tenant_id` nas tabelas principais)
-- [ ] Integração real WhatsApp Business API / Twilio
+- [ ] Envio automático de cobrança WhatsApp (Evolution API / Cloud API) — interface já preparada
+- [ ] Controle de vasilhame/casco retornável
+- [ ] Rotas de entrega / pedidos por telefone
+- [ ] Relatório DRE mensal com margem
 - [ ] PWA + cache offline do PDV
-- [ ] Cupom fiscal (SAT / NFC-e) via integração certificada
-- [ ] Cron pra marcar garantias como `expired` automaticamente
-- [ ] Dashboard com gráficos (Recharts)
-- [ ] Relatório DRE mensal com margem bruta
-- [ ] Importação CSV de produtos (migração inicial de planilha Excel)
-- [ ] Testes automatizados (PHPUnit + Pest)
+- [ ] Testes automatizados (Pest)
 
 ---
 
 ## 📄 Licença
 
-Proprietário. Todos os direitos reservados a **Angels** e cliente **Diogo (DUAS RODAS)**.
+Proprietário. Todos os direitos reservados.

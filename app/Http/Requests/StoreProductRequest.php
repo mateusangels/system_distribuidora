@@ -26,7 +26,7 @@ class StoreProductRequest extends FormRequest
             'sale_price' => ['required', 'numeric', 'min:0'],
             'stock_qty' => ['required', 'integer', 'min:0'],
             'min_stock_qty' => ['required', 'integer', 'min:0'],
-            'warranty_days' => ['required', 'integer', 'min:0'],
+            'warranty_days' => ['nullable', 'integer', 'min:0'],
             'active' => ['boolean'],
         ];
     }

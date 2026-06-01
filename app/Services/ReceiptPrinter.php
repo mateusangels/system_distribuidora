@@ -71,6 +71,12 @@ class ReceiptPrinter
             $lines[] = $this->kv('Recebido', $sale->amount_received);
             $lines[] = $this->kv('Troco', $sale->change_due ?? 0);
         }
+        if ($sale->payment_method === Sale::PAYMENT_FIADO) {
+            $lines[] = "*** FIADO - A RECEBER ***";
+            if ($sale->due_date) {
+                $lines[] = "Vencimento: " . $sale->due_date->format('d/m/Y');
+            }
+        }
         $lines[] = str_repeat('=', self::WIDTH);
         $lines[] = $this->center($cfg['footer']);
         $lines[] = "";
@@ -139,6 +145,12 @@ class ReceiptPrinter
         if ($sale->payment_method === Sale::PAYMENT_CASH && $sale->amount_received !== null) {
             $out .= $this->kv('Recebido', $sale->amount_received) . "\n";
             $out .= $this->kv('Troco', $sale->change_due ?? 0) . "\n";
+        }
+        if ($sale->payment_method === Sale::PAYMENT_FIADO) {
+            $out .= $BOLD_ON . "*** FIADO - A RECEBER ***\n" . $BOLD_OFF;
+            if ($sale->due_date) {
+                $out .= "Vencimento: " . $sale->due_date->format('d/m/Y') . "\n";
+            }
         }
         $out .= str_repeat('=', self::WIDTH) . "\n";
         $out .= $CENTER . $this->ascii($cfg['footer']) . "\n\n\n\n";
