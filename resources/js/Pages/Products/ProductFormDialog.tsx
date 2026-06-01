@@ -161,8 +161,9 @@ export default function ProductFormDialog({ open, product, categories, onClose }
     };
 
     return (
-        <Dialog open={open} onClose={onClose} title={isEdit ? `Editar: ${product!.name}` : 'Novo produto'} size="lg">
-            <form onSubmit={submit} className="space-y-5">
+        <Dialog open={open} onClose={onClose} title={isEdit ? `Editar: ${product!.name}` : 'Novo produto'} size="xl">
+            <form onSubmit={submit} className="space-y-4">
+                <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
                 {/* ---------- Identificação ---------- */}
                 <section>
                     <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
@@ -268,7 +269,9 @@ export default function ProductFormDialog({ open, product, categories, onClose }
                         </div>
                     </div>
                 </section>
+                </div>
 
+                <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
                 {/* ---------- Unidade de medida & embalagem ---------- */}
                 <section>
                     <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
@@ -391,6 +394,7 @@ export default function ProductFormDialog({ open, product, categories, onClose }
                         />
                     </div>
                 </section>
+                </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-ink-200 dark:border-ink-800">
                     <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>

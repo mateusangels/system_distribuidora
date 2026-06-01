@@ -29,7 +29,7 @@ export default function Dialog({ open, onClose, title, children, size = 'md' }: 
             />
             <div
                 className={cn(
-                    'relative w-full rounded-xl border shadow-2xl animate-slide-up',
+                    'relative flex max-h-[92vh] w-full flex-col rounded-xl border shadow-2xl animate-slide-up',
                     'bg-white border-ink-200',
                     'dark:bg-ink-900 dark:border-ink-700',
                     size === 'sm' && 'max-w-md',
@@ -39,13 +39,13 @@ export default function Dialog({ open, onClose, title, children, size = 'md' }: 
                 )}
             >
                 {title && (
-                    <div className="border-b border-ink-200 dark:border-ink-800 px-6 py-4">
+                    <div className="shrink-0 border-b border-ink-200 dark:border-ink-800 px-6 py-4">
                         <h2 className="text-lg font-semibold text-ink-900 dark:text-ink-50">
                             {title}
                         </h2>
                     </div>
                 )}
-                <div className="p-6">{children}</div>
+                <div className="overflow-y-auto p-6">{children}</div>
             </div>
         </div>
     );
