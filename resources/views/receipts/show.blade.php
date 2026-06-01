@@ -142,7 +142,7 @@
         <tbody>
         @foreach($sale->items as $item)
             <tr>
-                <td>{{ $item->product_name }}<br><small>SKU {{ $item->product_sku }} @ R$ {{ number_format((float)$item->unit_price,2,',','.') }}</small></td>
+                <td>{{ $item->product_name }}<br><small>@if((int)$item->units_each > 1){{ $item->qty }} {{ $item->sold_as }} ({{ $item->units_each }} un) @ R$ {{ number_format((float)$item->unit_price,2,',','.') }}@else SKU {{ $item->product_sku }} @ R$ {{ number_format((float)$item->unit_price,2,',','.') }}@endif</small></td>
                 <td class="qty">{{ $item->qty }}</td>
                 <td class="total">R$ {{ number_format((float)$item->total,2,',','.') }}</td>
             </tr>

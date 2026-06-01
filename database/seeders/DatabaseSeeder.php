@@ -74,6 +74,26 @@ class DatabaseSeeder extends Seeder
             );
         }
 
+        // ---------- Embalagens (caixa/fardo) ----------
+        // [sku => [unit_label, pack_label, pack_size, pack_price (null = automático)]]
+        $packs = [
+            'CER-001' => ['lata', 'Fardo', 12, null],    // Skol — fardo de 12, preço automático
+            'CER-002' => ['lata', 'Fardo', 12, 49.90],   // Brahma — fardo c/ preço de atacado
+            'CER-003' => ['long neck', 'Caixa', 24, 160.00], // Heineken — caixa de 24
+            'CER-005' => ['lata', 'Fardo', 12, null],    // Budweiser
+            'REF-002' => ['lata', 'Fardo', 12, 42.00],   // Coca lata — fardo de 12
+            'AGU-001' => ['un', 'Fardo', 12, 20.00],     // Água — fardo de 12
+            'ENE-001' => ['un', 'Caixa', 24, null],      // Red Bull — caixa de 24
+        ];
+        foreach ($packs as $sku => [$unit, $label, $size, $packPrice]) {
+            Product::where('sku', $sku)->update([
+                'unit_label' => $unit,
+                'pack_label' => $label,
+                'pack_size' => $size,
+                'pack_price' => $packPrice,
+            ]);
+        }
+
         // ---------- Clientes ----------
         $customers = [
             // [name, doc, phone, whatsapp, email, address, credit_limit]

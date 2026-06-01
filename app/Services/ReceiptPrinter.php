@@ -53,11 +53,19 @@ class ReceiptPrinter
                 $item->qty,
                 'R$ ' . number_format((float) $item->total, 2, ',', '.')
             );
-            $lines[] = sprintf(
-                "  SKU %s @ R$ %s",
-                $item->product_sku,
-                number_format((float) $item->unit_price, 2, ',', '.')
-            );
+            $lines[] = ((int) $item->units_each > 1)
+                ? sprintf(
+                    "  %d %s (%d un) @ R$ %s",
+                    $item->qty,
+                    $this->ascii($item->sold_as),
+                    $item->units_each,
+                    number_format((float) $item->unit_price, 2, ',', '.')
+                )
+                : sprintf(
+                    "  SKU %s @ R$ %s",
+                    $item->product_sku,
+                    number_format((float) $item->unit_price, 2, ',', '.')
+                );
         }
 
         $lines[] = str_repeat('-', self::WIDTH);
@@ -133,6 +141,9 @@ class ReceiptPrinter
                 $item->qty,
                 'R$ ' . number_format((float) $item->total, 2, ',', '.')
             );
+            if ((int) $item->units_each > 1) {
+                $out .= sprintf("  %d %s (%d un)\n", $item->qty, $this->ascii($item->sold_as), $item->units_each);
+            }
         }
 
         $out .= str_repeat('-', self::WIDTH) . "\n";

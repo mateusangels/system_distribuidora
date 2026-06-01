@@ -22,6 +22,8 @@ class StoreSaleRequest extends FormRequest
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.units_each' => ['nullable', 'integer', 'min:1'],
+            'items.*.sold_as' => ['nullable', 'string', 'max:30'],
             'payment.method' => ['required', Rule::in([
                 Sale::PAYMENT_CASH,
                 Sale::PAYMENT_PIX,

@@ -8,6 +8,7 @@ import Input from '@/Components/ui/Input';
 import Select from '@/Components/ui/Select';
 import Icon from '@/Components/ui/Icon';
 import ProductFormDialog from './ProductFormDialog';
+import StockDialog from './StockDialog';
 import { brl } from '@/lib/format';
 import type { Category, Paginated, Product, PageProps } from '@/types';
 import { useEffect, useState } from 'react';
@@ -29,6 +30,7 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
     const [cat, setCat] = useState<string>(filters.category_id ? String(filters.category_id) : '');
     const [stock, setStock] = useState<string>(filters.stock ?? '');
     const [editing, setEditing] = useState<Product | null | 'new'>(null);
+    const [stockProduct, setStockProduct] = useState<Product | null>(null);
 
     // Abre o modal automaticamente quando vem de /products/create ou /products/{id}/edit
     useEffect(() => {
@@ -134,6 +136,9 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                     <TR key={p.id}>
                                         <TD>
                                             <div className="font-medium text-ink-900 dark:text-ink-100">{p.name}</div>
+                                            {p.pack_label && Number(p.pack_size) > 1 && (
+                                                <div className="text-xs text-ink-500">{p.pack_label} c/ {p.pack_size} {p.unit_label || 'un'}</div>
+                                            )}
                                             {!p.active && <Badge tone="default" className="mt-1">inativo</Badge>}
                                         </TD>
                                         <TD className="text-xs">
@@ -148,25 +153,29 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                                             </Badge>
                                         </TD>
                                         <TD className="text-right">
-                                            {isAdmin ? (
-                                                <div className="inline-flex gap-1">
-                                                    <Button size="sm" variant="secondary" onClick={() => setEditing(p)}>
-                                                        <Icon name="mdi:pencil-outline" className="h-4 w-4" />
-                                                        Editar
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => remove(p.id)}
-                                                        title="Remover"
-                                                        className="!text-red-600 hover:!bg-red-50 dark:!text-red-400 dark:hover:!bg-red-500/10"
-                                                    >
-                                                        <Icon name="mdi:trash-can-outline" className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <span className="text-xs text-ink-500">somente leitura</span>
-                                            )}
+                                            <div className="inline-flex gap-1">
+                                                <Button size="sm" variant="secondary" onClick={() => setStockProduct(p)} title="Movimentar estoque">
+                                                    <Icon name="mdi:warehouse" className="h-4 w-4" />
+                                                    Estoque
+                                                </Button>
+                                                {isAdmin && (
+                                                    <>
+                                                        <Button size="sm" variant="secondary" onClick={() => setEditing(p)}>
+                                                            <Icon name="mdi:pencil-outline" className="h-4 w-4" />
+                                                            Editar
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => remove(p.id)}
+                                                            title="Remover"
+                                                            className="!text-red-600 hover:!bg-red-50 dark:!text-red-400 dark:hover:!bg-red-500/10"
+                                                        >
+                                                            <Icon name="mdi:trash-can-outline" className="h-4 w-4" />
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </TD>
                                     </TR>
                                 ))}
@@ -188,6 +197,12 @@ export default function ProductsIndex({ products, categories, filters }: Props) 
                 product={editing === 'new' ? null : editing}
                 categories={categories}
                 onClose={() => setEditing(null)}
+            />
+
+            <StockDialog
+                open={stockProduct !== null}
+                product={stockProduct}
+                onClose={() => setStockProduct(null)}
             />
         </AppLayout>
     );

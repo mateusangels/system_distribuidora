@@ -13,6 +13,8 @@ class SaleItem extends Model
         'product_id',
         'product_name',
         'product_sku',
+        'sold_as',
+        'units_each',
         'qty',
         'unit_price',
         'total',
@@ -23,6 +25,7 @@ class SaleItem extends Model
     {
         return [
             'qty' => 'integer',
+            'units_each' => 'integer',
             'unit_price' => 'decimal:2',
             'total' => 'decimal:2',
             'warranty_days' => 'integer',

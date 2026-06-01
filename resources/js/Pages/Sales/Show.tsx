@@ -66,9 +66,17 @@ export default function SaleShow({ sale }: Props) {
                                     <TR key={it.id}>
                                         <TD>
                                             <div className="font-medium text-ink-900 dark:text-ink-100">{it.product_name}</div>
-                                            <div className="text-xs text-ink-500">{it.product_sku}</div>
+                                            <div className="text-xs text-ink-500">
+                                                {it.product_sku}
+                                                {(it.units_each ?? 1) > 1 && (
+                                                    <span className="ml-1.5 text-brand-600 dark:text-brand-300">· {it.sold_as} ({it.units_each} un)</span>
+                                                )}
+                                            </div>
                                         </TD>
-                                        <TD className="text-center">{it.qty}</TD>
+                                        <TD className="text-center">
+                                            {it.qty}
+                                            {(it.units_each ?? 1) > 1 && <span className="text-xs text-ink-500"> {it.sold_as}</span>}
+                                        </TD>
                                         <TD className="text-right font-mono">{brl(it.unit_price)}</TD>
                                         <TD className="text-right font-mono">{brl(it.total)}</TD>
                                     </TR>

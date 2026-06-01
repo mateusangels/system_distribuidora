@@ -8,7 +8,7 @@ import Badge from '@/Components/ui/Badge';
 import Icon from '@/Components/ui/Icon';
 import { brl, num, paymentLabel } from '@/lib/format';
 import { useShortcut } from '@/hooks/use-shortcut';
-import type { PaymentMethod, Product } from '@/types';
+import type { PaymentMethod } from '@/types';
 
 /** Cliente no PDV — inclui dados de crédito vindos do /customers/search. */
 interface PdvCustomer {
@@ -22,59 +22,62 @@ interface PdvCustomer {
     available_credit?: number | null;
 }
 
-interface CartItem {
-    product_id: number;
+/** Produto vindo do /products/search (inclui dados de embalagem). */
+interface PdvProduct {
+    id: number;
     sku: string;
     barcode: string | null;
     name: string;
-    qty: number;
-    unit_price: number;
+    sale_price: string | number;
     stock_qty: number;
-    warranty_days: number;
+    unit_label: string;
+    has_pack: boolean;
+    pack_label: string | null;
+    pack_size: number;
+    pack_price: number;
+}
+
+interface CartItem {
+    key: string;          // produto + modo (unit/pack)
+    product_id: number;
+    sku: string;
+    name: string;
+    qty: number;          // qtd de unidades de venda (caixas ou avulsas)
+    unit_price: number;   // preço por unidade de venda
+    stock_qty: number;    // estoque em unidades-base
+    units_each: number;   // unidades-base por unidade de venda (1 = avulso)
+    sold_as: string;      // rótulo: "Caixa" ou "un"
 }
 
 type Action =
-    | { type: 'add'; product: Product }
-    | { type: 'inc'; id: number }
-    | { type: 'dec'; id: number }
-    | { type: 'set_qty'; id: number; qty: number }
-    | { type: 'remove'; id: number }
+    | { type: 'add'; item: CartItem }
+    | { type: 'inc'; key: string }
+    | { type: 'dec'; key: string }
+    | { type: 'set_qty'; key: string; qty: number }
+    | { type: 'remove'; key: string }
     | { type: 'clear' };
 
 function cartReducer(state: CartItem[], action: Action): CartItem[] {
     switch (action.type) {
         case 'add': {
-            const p = action.product;
-            const idx = state.findIndex((i) => i.product_id === p.id);
+            const idx = state.findIndex((i) => i.key === action.item.key);
             if (idx >= 0) {
                 const next = [...state];
                 next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
                 return next;
             }
-            return [
-                ...state,
-                {
-                    product_id: p.id,
-                    sku: p.sku,
-                    barcode: p.barcode,
-                    name: p.name,
-                    qty: 1,
-                    unit_price: num(p.sale_price),
-                    stock_qty: p.stock_qty,
-                    warranty_days: p.warranty_days,
-                },
-            ];
+            return [...state, action.item];
         }
         case 'inc':
-            return state.map((i) => i.product_id === action.id ? { ...i, qty: i.qty + 1 } : i);
+            return state.map((i) => i.key === action.key ? { ...i, qty: i.qty + 1 } : i);
         case 'dec':
             return state
-                .map((i) => i.product_id === action.id ? { ...i, qty: i.qty - 1 } : i)
+                .map((i) => i.key === action.key ? { ...i, qty: i.qty - 1 } : i)
                 .filter((i) => i.qty > 0);
         case 'set_qty':
-            return state.map((i) => i.product_id === action.id ? { ...i, qty: Math.max(1, action.qty) } : i);
+            return state.map((i) => i.key === action.key ? { ...i, qty: Math.max(1, action.qty) } : i);
         case 'remove':
-            return state.filter((i) => i.product_id !== action.id);
+            return state.filter((i) => i.key !== action.key);
         case 'clear':
             return [];
     }
@@ -83,7 +86,7 @@ function cartReducer(state: CartItem[], action: Action): CartItem[] {
 export default function PDV() {
     const [cart, dispatch] = useReducer(cartReducer, [] as CartItem[]);
     const [search, setSearch] = useState('');
-    const [results, setResults] = useState<Product[]>([]);
+    const [results, setResults] = useState<PdvProduct[]>([]);
     const [searching, setSearching] = useState(false);
     const [paymentOpen, setPaymentOpen] = useState(false);
     const [customerOpen, setCustomerOpen] = useState(false);
@@ -119,14 +122,12 @@ export default function PDV() {
                     headers: { Accept: 'application/json' },
                 });
                 if (!r.ok) return;
-                const data: Product[] = await r.json();
+                const data: PdvProduct[] = await r.json();
 
-                // Match exato por barcode ou SKU → adiciona automático sem precisar de Enter
-                // (scanners que mandam "ENTER" já são cobertos pelo onSearchKey; isso cobre
-                //  scanners sem ENTER e digitação manual do código completo).
+                // Match exato por barcode ou SKU → adiciona automático (como unidade avulsa).
                 const exact = data.find((p) => p.barcode === term || p.sku === term);
                 if (exact) {
-                    addProduct(exact);
+                    addProduct(exact, 'unit');
                     setSearch('');
                     setResults([]);
                     return;
@@ -151,14 +152,14 @@ export default function PDV() {
                     headers: { Accept: 'application/json' },
                 });
                 if (r.ok) {
-                    const data: Product[] = await r.json();
+                    const data: PdvProduct[] = await r.json();
                     if (data.length === 1) {
-                        addProduct(data[0]);
+                        addProduct(data[0], 'unit');
                         setSearch('');
                         setResults([]);
                     } else if (data.length === 0) {
                         if (results[0]) {
-                            addProduct(results[0]);
+                            addProduct(results[0], 'unit');
                             setSearch('');
                             setResults([]);
                         } else {
@@ -173,26 +174,68 @@ export default function PDV() {
         }
     };
 
-    const addProduct = (p: Product) => {
+    const flashError = (msg: string) => { setError(msg); setTimeout(() => setError(null), 2800); };
+
+    /** Unidades-base já reservadas no carrinho para um produto (somando caixa + avulso). */
+    const baseUsed = (productId: number) =>
+        cart.filter((i) => i.product_id === productId).reduce((s, i) => s + i.qty * i.units_each, 0);
+
+    const addProduct = (p: PdvProduct, mode: 'unit' | 'pack') => {
         if (p.stock_qty <= 0) {
-            setError(`${p.name} sem estoque.`);
-            setTimeout(() => setError(null), 2500);
+            flashError(`${p.name} sem estoque.`);
             return;
         }
-        const inCart = cart.find((i) => i.product_id === p.id)?.qty ?? 0;
-        if (inCart + 1 > p.stock_qty) {
-            setError(`Estoque insuficiente para ${p.name}. Disponível: ${p.stock_qty}.`);
-            setTimeout(() => setError(null), 2500);
+        const unitsEach = mode === 'pack' ? (p.pack_size || 1) : 1;
+        const soldAs = mode === 'pack' ? (p.pack_label || 'Caixa') : (p.unit_label || 'un');
+        const price = mode === 'pack' ? Number(p.pack_price) : num(p.sale_price);
+
+        if (baseUsed(p.id) + unitsEach > p.stock_qty) {
+            flashError(`Estoque insuficiente para ${p.name}. Disponível: ${p.stock_qty} ${p.unit_label || 'un'}.`);
             return;
         }
-        dispatch({ type: 'add', product: p });
+
+        dispatch({
+            type: 'add',
+            item: {
+                key: `${p.id}:${mode}`,
+                product_id: p.id,
+                sku: p.sku,
+                name: p.name,
+                qty: 1,
+                unit_price: price,
+                stock_qty: p.stock_qty,
+                units_each: unitsEach,
+                sold_as: soldAs,
+            },
+        });
+    };
+
+    /** Incrementa respeitando o estoque em unidades-base. */
+    const incItem = (item: CartItem) => {
+        if (baseUsed(item.product_id) + item.units_each > item.stock_qty) {
+            flashError(`Estoque insuficiente para ${item.name}. Disponível: ${item.stock_qty} un.`);
+            return;
+        }
+        dispatch({ type: 'inc', key: item.key });
+    };
+
+    const setItemQty = (item: CartItem, qty: number) => {
+        const q = Math.max(1, qty);
+        const otherBase = baseUsed(item.product_id) - item.qty * item.units_each;
+        if (otherBase + q * item.units_each > item.stock_qty) {
+            const maxQty = Math.floor((item.stock_qty - otherBase) / item.units_each);
+            flashError(`Máximo ${maxQty} ${item.sold_as} (estoque ${item.stock_qty} un).`);
+            dispatch({ type: 'set_qty', key: item.key, qty: Math.max(1, maxQty) });
+            return;
+        }
+        dispatch({ type: 'set_qty', key: item.key, qty: q });
     };
 
     const finalize = async (method: PaymentMethod, amountReceived: number | null, customerDoc: string | null, dueDate: string | null) => {
         const payload = {
             customer_id: customer?.id ?? null,
             customer_document: customerDoc || null,
-            items: cart.map((i) => ({ product_id: i.product_id, qty: i.qty, unit_price: i.unit_price })),
+            items: cart.map((i) => ({ product_id: i.product_id, qty: i.qty, unit_price: i.unit_price, units_each: i.units_each, sold_as: i.sold_as })),
             payment: { method, amount_received: amountReceived, discount, due_date: dueDate },
         };
 
@@ -289,21 +332,39 @@ export default function PDV() {
                         {results.length > 0 && (
                             <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-ink-200 bg-white dark:border-ink-800 dark:bg-ink-950">
                                 {results.map((p) => (
-                                    <button
+                                    <div
                                         key={p.id}
-                                        type="button"
-                                        onClick={() => { addProduct(p); setSearch(''); setResults([]); }}
-                                        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-ink-50 border-b border-ink-200 last:border-0 dark:hover:bg-ink-800 dark:border-ink-800"
+                                        className="flex w-full items-center justify-between gap-3 px-3 py-2 border-b border-ink-200 last:border-0 dark:border-ink-800"
                                     >
-                                        <div>
-                                            <div className="font-medium">{p.name}</div>
-                                            <div className="text-xs text-ink-500">{p.sku} {p.barcode && `· ${p.barcode}`}</div>
+                                        <div className="min-w-0">
+                                            <div className="font-medium truncate">{p.name}</div>
+                                            <div className="text-xs text-ink-500">
+                                                {p.sku}{p.barcode ? ` · ${p.barcode}` : ''} · est. {p.stock_qty} {p.unit_label || 'un'}
+                                            </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="font-mono text-brand-600 dark:text-brand-300">{brl(p.sale_price)}</div>
-                                            <div className="text-xs text-ink-500">est. {p.stock_qty}</div>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => { addProduct(p, 'unit'); setSearch(''); setResults([]); }}
+                                                className="rounded-md border border-ink-200 px-2.5 py-1 text-center hover:bg-ink-50 dark:border-ink-700 dark:hover:bg-ink-800"
+                                                title={`Vender por ${p.unit_label || 'unidade'}`}
+                                            >
+                                                <div className="text-[10px] uppercase text-ink-500">{p.unit_label || 'un'}</div>
+                                                <div className="font-mono text-sm text-brand-600 dark:text-brand-300">{brl(p.sale_price)}</div>
+                                            </button>
+                                            {p.has_pack && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { addProduct(p, 'pack'); setSearch(''); setResults([]); }}
+                                                    className="rounded-md border border-brand-300 bg-brand-50 px-2.5 py-1 text-center hover:bg-brand-100 dark:border-brand-500/40 dark:bg-brand-600/10 dark:hover:bg-brand-600/20"
+                                                    title={`Vender por ${p.pack_label}`}
+                                                >
+                                                    <div className="text-[10px] uppercase text-ink-500">{p.pack_label} ({p.pack_size})</div>
+                                                    <div className="font-mono text-sm text-brand-600 dark:text-brand-300">{brl(p.pack_price)}</div>
+                                                </button>
+                                            )}
                                         </div>
-                                    </button>
+                                    </div>
                                 ))}
                             </div>
                         )}
@@ -331,25 +392,31 @@ export default function PDV() {
                                 </thead>
                                 <tbody className="divide-y divide-ink-200 dark:divide-ink-800">
                                     {cart.map((it) => (
-                                        <tr key={it.product_id}>
+                                        <tr key={it.key}>
                                             <td className="px-4 py-3">
                                                 <div className="font-medium">{it.name}</div>
-                                                <div className="text-xs text-ink-500">{it.sku}</div>
+                                                <div className="text-xs text-ink-500">
+                                                    {it.sku}
+                                                    {it.units_each > 1 && (
+                                                        <span className="ml-1.5 rounded bg-brand-50 px-1.5 py-0.5 text-brand-700 dark:bg-brand-600/15 dark:text-brand-300">
+                                                            {it.sold_as} · {it.units_each} un
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-2 py-3">
                                                 <div className="inline-flex items-center gap-1">
-                                                    <button onClick={() => dispatch({ type: 'dec', id: it.product_id })} className="rounded bg-ink-100 px-2 py-1 hover:bg-ink-200 dark:bg-ink-800 dark:hover:bg-ink-700">
+                                                    <button onClick={() => dispatch({ type: 'dec', key: it.key })} className="rounded bg-ink-100 px-2 py-1 hover:bg-ink-200 dark:bg-ink-800 dark:hover:bg-ink-700">
                                                         <Icon name="mdi:minus" className="h-4 w-4" />
                                                     </button>
                                                     <input
                                                         type="number"
                                                         min={1}
-                                                        max={it.stock_qty}
                                                         value={it.qty}
-                                                        onChange={(e) => dispatch({ type: 'set_qty', id: it.product_id, qty: parseInt(e.target.value) || 1 })}
+                                                        onChange={(e) => setItemQty(it, parseInt(e.target.value) || 1)}
                                                         className="w-12 rounded border border-ink-300 bg-white px-1 py-1 text-center text-sm dark:border-ink-700 dark:bg-ink-900"
                                                     />
-                                                    <button onClick={() => dispatch({ type: 'inc', id: it.product_id })} className="rounded bg-ink-100 px-2 py-1 hover:bg-ink-200 dark:bg-ink-800 dark:hover:bg-ink-700">
+                                                    <button onClick={() => incItem(it)} className="rounded bg-ink-100 px-2 py-1 hover:bg-ink-200 dark:bg-ink-800 dark:hover:bg-ink-700">
                                                         <Icon name="mdi:plus" className="h-4 w-4" />
                                                     </button>
                                                 </div>
@@ -358,7 +425,7 @@ export default function PDV() {
                                             <td className="px-2 py-3 text-right font-mono font-semibold">{brl(it.unit_price * it.qty)}</td>
                                             <td className="px-2 py-3 text-right">
                                                 <button
-                                                    onClick={() => dispatch({ type: 'remove', id: it.product_id })}
+                                                    onClick={() => dispatch({ type: 'remove', key: it.key })}
                                                     title="Remover item"
                                                     className="rounded bg-ink-100 p-1.5 text-ink-600 hover:bg-red-600 hover:text-white dark:bg-ink-800 dark:text-ink-300"
                                                 >

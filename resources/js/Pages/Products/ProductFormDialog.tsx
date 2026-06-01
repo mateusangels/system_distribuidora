@@ -29,13 +29,22 @@ export default function ProductFormDialog({ open, product, categories, onClose }
         min_stock_qty: 5,
         warranty_days: 0,
         active: true,
+        unit_label: 'un',
+        pack_label: '' as string,
+        pack_size: '' as string | number,
+        pack_price: '' as string | number,
     });
+
+    // Embalagem: vende em caixa/fardo? e preço auto ou manual?
+    const [hasPack, setHasPack] = useState(false);
+    const [autoPackPrice, setAutoPackPrice] = useState(true);
 
     // Carrega dados ao abrir/trocar produto
     useEffect(() => {
         if (!open) return;
         clearErrors();
         if (product) {
+            const withPack = !!product.pack_label && Number(product.pack_size) > 1;
             setData({
                 sku: product.sku ?? '',
                 barcode: product.barcode ?? '',
@@ -48,9 +57,17 @@ export default function ProductFormDialog({ open, product, categories, onClose }
                 min_stock_qty: product.min_stock_qty ?? 5,
                 warranty_days: product.warranty_days ?? 0,
                 active: product.active ?? true,
+                unit_label: product.unit_label ?? 'un',
+                pack_label: product.pack_label ?? '',
+                pack_size: product.pack_size ?? '',
+                pack_price: product.pack_price != null ? String(product.pack_price) : '',
             });
+            setHasPack(withPack);
+            setAutoPackPrice(product.pack_price == null);
         } else {
             reset();
+            setHasPack(false);
+            setAutoPackPrice(true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, product?.id]);
@@ -71,6 +88,28 @@ export default function ProductFormDialog({ open, product, categories, onClose }
     const profit = sale - cost;
     const margin = cost > 0 ? (profit / cost) * 100 : 0; // markup sobre custo
     const marginOnSale = sale > 0 ? (profit / sale) * 100 : 0; // margem sobre venda
+
+    // ---- Embalagem (caixa/fardo) ----
+    const packSizeNum = parseInt(String(data.pack_size)) || 0;
+    const autoPackVal = Math.round(sale * packSizeNum * 100) / 100;
+    const effectivePackPrice = autoPackPrice ? autoPackVal : (num(data.pack_price) || 0);
+    const packName = data.pack_label?.trim() || 'Caixa';
+
+    const toggleHasPack = (on: boolean) => {
+        setHasPack(on);
+        if (on) {
+            if (!data.pack_label) setData('pack_label', 'Caixa');
+        } else {
+            setData('pack_label', '');
+            setData('pack_size', '');
+            setData('pack_price', '');
+        }
+    };
+
+    const toggleAutoPrice = (auto: boolean) => {
+        setAutoPackPrice(auto);
+        if (auto) setData('pack_price', '');
+    };
 
     const profitTone = useMemo(() => {
         if (!cost || !sale) return 'neutral';
@@ -228,6 +267,104 @@ export default function ProductFormDialog({ open, product, categories, onClose }
                             </div>
                         </div>
                     </div>
+                </section>
+
+                {/* ---------- Unidade de medida & embalagem ---------- */}
+                <section>
+                    <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+                        Unidade de medida & embalagem
+                    </h3>
+                    <p className="mb-3 text-xs text-ink-500 dark:text-ink-400">
+                        Defina como você vende este produto. Se ele vier em caixa/fardo, configure abaixo —
+                        no PDV você poderá escolher vender a caixa inteira ou a unidade avulsa.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <Input
+                            label="Unidade avulsa"
+                            value={data.unit_label}
+                            onChange={(e) => setData('unit_label', e.target.value)}
+                            error={errors.unit_label}
+                            placeholder="un"
+                            hint="Como você chama a unidade solta: un, garrafa, lata, litro…"
+                        />
+                    </div>
+
+                    <label className="mt-3 flex items-center gap-2 text-sm cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={hasPack}
+                            onChange={(e) => toggleHasPack(e.target.checked)}
+                            className="h-4 w-4 rounded border-ink-300 bg-white text-brand-600 focus:ring-brand-500 dark:border-ink-600 dark:bg-ink-900"
+                        />
+                        Este produto também é vendido em <strong>caixa / fardo</strong>
+                    </label>
+
+                    {hasPack && (
+                        <div className="mt-3 space-y-3 rounded-lg border border-ink-200 bg-ink-50/60 p-4 dark:border-ink-800 dark:bg-ink-950/50">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-ink-600 dark:text-ink-300">Tipo de embalagem</label>
+                                    <input
+                                        list="pack-types"
+                                        value={data.pack_label}
+                                        onChange={(e) => setData('pack_label', e.target.value)}
+                                        placeholder="Caixa"
+                                        className="block w-full rounded-md border border-ink-300 bg-white px-3 py-2 text-sm text-ink-900 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-50"
+                                    />
+                                    <datalist id="pack-types">
+                                        <option value="Caixa" />
+                                        <option value="Fardo" />
+                                        <option value="Engradado" />
+                                        <option value="Pacote" />
+                                        <option value="Grade" />
+                                        <option value="Bandeja" />
+                                    </datalist>
+                                </div>
+                                <Input
+                                    label={`Unidades por ${packName}`}
+                                    type="number"
+                                    min={2}
+                                    value={data.pack_size as any}
+                                    onChange={(e) => setData('pack_size', e.target.value)}
+                                    error={errors.pack_size}
+                                    placeholder="ex: 12"
+                                    hint="Quantas unidades vêm dentro"
+                                />
+                                <div>
+                                    <Input
+                                        label={`Preço da ${packName} (R$)`}
+                                        type="number"
+                                        step="0.01"
+                                        min={0}
+                                        disabled={autoPackPrice}
+                                        value={autoPackPrice ? autoPackVal.toFixed(2) : (data.pack_price as any)}
+                                        onChange={(e) => setData('pack_price', e.target.value)}
+                                        error={errors.pack_price}
+                                    />
+                                    <label className="mt-1.5 flex items-center gap-1.5 text-xs cursor-pointer select-none text-ink-600 dark:text-ink-300">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoPackPrice}
+                                            onChange={(e) => toggleAutoPrice(e.target.checked)}
+                                            className="h-3.5 w-3.5 rounded border-ink-300 text-brand-600 focus:ring-brand-500 dark:border-ink-600 dark:bg-ink-900"
+                                        />
+                                        Automático ({packSizeNum || 0} × preço da unidade)
+                                    </label>
+                                </div>
+                            </div>
+
+                            {packSizeNum > 1 && (
+                                <div className="rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-ink-800 dark:border-brand-500/30 dark:bg-brand-600/10 dark:text-ink-100">
+                                    <Icon name="mdi:information-outline" className="mr-1 inline h-4 w-4 text-brand-600 dark:text-brand-300" />
+                                    1 {packName} = <strong>{packSizeNum} {data.unit_label || 'un'}</strong> · Preço da {packName}: <strong>{brl(effectivePackPrice)}</strong>
+                                    <div className="mt-0.5 text-xs text-ink-500 dark:text-ink-400">
+                                        Ex.: comprar <strong>2 {packName}s</strong> na entrada de estoque vira <strong>{packSizeNum * 2} {data.unit_label || 'un'}</strong>. O estoque é sempre contado em {data.unit_label || 'unidades'}.
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </section>
 
                 {/* ---------- Estoque ---------- */}

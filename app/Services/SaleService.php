@@ -68,9 +68,17 @@ class SaleService
                 if (!$product->active) {
                     throw new \DomainException("Produto {$product->name} está inativo.");
                 }
-                if ($product->stock_qty < $qty) {
+
+                // Unidade vendida: avulsa (units_each=1) ou caixa/fardo (units_each=pack_size)
+                $unitsEach = max(1, (int) ($row['units_each'] ?? 1));
+                $soldAs = isset($row['sold_as']) && $row['sold_as'] !== ''
+                    ? (string) $row['sold_as']
+                    : ($product->unit_label ?: 'un');
+                $baseUnits = $qty * $unitsEach;
+
+                if ($product->stock_qty < $baseUnits) {
                     throw new \DomainException(
-                        "Estoque insuficiente para {$product->name}. Disponível: {$product->stock_qty}."
+                        "Estoque insuficiente para {$product->name}. Disponível: {$product->stock_qty} un, solicitado: {$baseUnits} un."
                     );
                 }
 
@@ -80,21 +88,23 @@ class SaleService
                 $lineTotal = round($unit * $qty, 2);
                 $subtotal += $lineTotal;
 
-                $item = SaleItem::create([
+                SaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'product_sku' => $product->sku,
+                    'sold_as' => $soldAs,
+                    'units_each' => $unitsEach,
                     'qty' => $qty,
                     'unit_price' => $unit,
                     'total' => $lineTotal,
                     'warranty_days' => $product->warranty_days,
                 ]);
 
-                // débito estoque
+                // débito estoque (sempre em unidades-base)
                 $this->stock->move(
                     product: $product,
-                    qty: $qty,
+                    qty: $baseUnits,
                     type: StockMovement::TYPE_OUT,
                     reason: "Venda {$sale->code}",
                     sale: $sale,

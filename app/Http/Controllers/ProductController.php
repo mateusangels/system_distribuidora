@@ -87,26 +87,69 @@ class ProductController extends Controller
         }
 
         return response()->json(
-            $query->limit(15)->get([
-                'id', 'sku', 'barcode', 'name', 'sale_price', 'stock_qty', 'warranty_days',
+            $query->limit(15)->get()->map(fn (Product $p) => [
+                'id' => $p->id,
+                'sku' => $p->sku,
+                'barcode' => $p->barcode,
+                'name' => $p->name,
+                'sale_price' => $p->sale_price,
+                'stock_qty' => $p->stock_qty,
+                'unit_label' => $p->unit_label ?: 'un',
+                'has_pack' => $p->hasPack(),
+                'pack_label' => $p->pack_label,
+                'pack_size' => $p->unitsPerPack(),
+                'pack_price' => $p->effectivePackPrice(),
             ])
+        );
+    }
+
+    /** Histórico recente de movimentações de um produto (modal de estoque). */
+    public function movements(Product $product)
+    {
+        return response()->json(
+            $product->movements()
+                ->with('user:id,name')
+                ->latest('id')
+                ->limit(20)
+                ->get(['id', 'type', 'qty', 'balance_after', 'reason', 'user_id', 'created_at'])
+                ->map(fn ($m) => [
+                    'id' => $m->id,
+                    'type' => $m->type,
+                    'type_label' => $m->typeLabel(),
+                    'qty' => $m->qty,
+                    'balance_after' => $m->balance_after,
+                    'reason' => $m->reason,
+                    'user' => $m->user?->name,
+                    'created_at' => $m->created_at?->toDateTimeString(),
+                ])
         );
     }
 
     public function adjustStock(Request $request, Product $product, StockService $stock): RedirectResponse
     {
         $data = $request->validate([
-            'qty' => ['required', 'integer'],
+            'qty' => ['required', 'integer', 'min:0'],
             'reason' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:in,out,adjust'],
+            'um' => ['nullable', 'in:unit,pack'],
         ]);
 
-        $stock->move(
-            product: $product,
-            qty: abs($data['qty']),
-            type: $data['type'],
-            reason: $data['reason'],
-        );
+        // Converte caixa -> unidades-base quando a movimentação é em embalagem
+        $multiplier = ($data['um'] ?? 'unit') === 'pack' && $product->hasPack()
+            ? $product->unitsPerPack()
+            : 1;
+        $baseQty = abs((int) $data['qty']) * $multiplier;
+
+        try {
+            $stock->move(
+                product: $product,
+                qty: $baseQty,
+                type: $data['type'],
+                reason: $data['reason'],
+            );
+        } catch (\DomainException $e) {
+            return back()->withErrors(['qty' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Estoque atualizado!');
     }

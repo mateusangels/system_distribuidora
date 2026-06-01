@@ -24,6 +24,10 @@ class Product extends Model
         'min_stock_qty',
         'warranty_days',
         'active',
+        'unit_label',
+        'pack_label',
+        'pack_size',
+        'pack_price',
     ];
 
     protected function casts(): array
@@ -31,11 +35,36 @@ class Product extends Model
         return [
             'cost_price' => 'decimal:2',
             'sale_price' => 'decimal:2',
+            'pack_price' => 'decimal:2',
             'stock_qty' => 'integer',
             'min_stock_qty' => 'integer',
+            'pack_size' => 'integer',
             'warranty_days' => 'integer',
             'active' => 'boolean',
         ];
+    }
+
+    /** Tem embalagem fechada (caixa/fardo) com mais de 1 unidade? */
+    public function hasPack(): bool
+    {
+        return !empty($this->pack_label) && (int) $this->pack_size > 1;
+    }
+
+    /** Unidades-base por embalagem (1 se não houver pack). */
+    public function unitsPerPack(): int
+    {
+        return $this->hasPack() ? (int) $this->pack_size : 1;
+    }
+
+    /** Preço efetivo da embalagem: manual se definido, senão automático. */
+    public function effectivePackPrice(): float
+    {
+        if (!$this->hasPack()) {
+            return (float) $this->sale_price;
+        }
+        return $this->pack_price !== null
+            ? (float) $this->pack_price
+            : round((float) $this->sale_price * $this->unitsPerPack(), 2);
     }
 
     public function category(): BelongsTo

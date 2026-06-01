@@ -29,6 +29,10 @@ export interface Product {
     min_stock_qty: number;
     warranty_days: number;
     active: boolean;
+    unit_label?: string;
+    pack_label?: string | null;
+    pack_size?: number | null;
+    pack_price?: string | number | null;
     created_at?: string;
     updated_at?: string;
 }
@@ -54,6 +58,8 @@ export interface SaleItem {
     product_id: number;
     product_name: string;
     product_sku: string;
+    sold_as?: string;
+    units_each?: number;
     qty: number;
     unit_price: string;
     total: string;
