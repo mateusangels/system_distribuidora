@@ -111,6 +111,58 @@ export interface Alerts {
     fiado_overdue: number;
 }
 
+// ----- Mesas / comandas -----
+export interface TableOrderItem {
+    id: number;
+    product_id: number;
+    name: string;
+    sku: string | null;
+    sold_as: string;
+    units_each: number;
+    qty: number;
+    unit_price: number;
+    total: number;
+    stock_qty: number;
+}
+
+export interface TableOrderCustomer {
+    id: number;
+    name: string;
+    document: string | null;
+    phone: string | null;
+    whatsapp: string | null;
+    credit_limit: number;
+    outstanding: number;
+    available_credit: number | null;
+}
+
+export interface TableOrder {
+    id: number;
+    code: string;
+    status: 'open' | 'closed' | 'cancelled';
+    customer: TableOrderCustomer | null;
+    customer_document: string | null;
+    opened_at: string | null;
+    subtotal: number;
+    items: TableOrderItem[];
+}
+
+export interface RestaurantTable {
+    id: number;
+    name: string;
+    capacity: number | null;
+    status: 'free' | 'occupied';
+    notes?: string | null;
+    order?: {
+        id: number;
+        code: string;
+        customer: { id: number; name: string } | null;
+        items_count: number;
+        subtotal: number;
+        opened_at: string | null;
+    } | null;
+}
+
 export interface Paginated<T> {
     data: T[];
     current_page: number;

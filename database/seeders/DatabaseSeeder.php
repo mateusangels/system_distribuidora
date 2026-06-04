@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\RestaurantTable;
 use App\Models\User;
 use App\Services\FiadoService;
 use App\Services\SaleService;
@@ -108,6 +109,14 @@ class DatabaseSeeder extends Seeder
             $customerModels[] = Customer::firstOrCreate(
                 ['name' => $name],
                 ['document' => $doc, 'phone' => $phone, 'whatsapp' => $whats, 'email' => $email, 'address' => $addr, 'credit_limit' => $limit]
+            );
+        }
+
+        // ---------- Mesas ----------
+        for ($i = 1; $i <= 8; $i++) {
+            RestaurantTable::firstOrCreate(
+                ['name' => "Mesa $i"],
+                ['capacity' => 4, 'status' => RestaurantTable::STATUS_FREE]
             );
         }
 

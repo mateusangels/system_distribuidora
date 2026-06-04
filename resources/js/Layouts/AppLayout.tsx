@@ -18,6 +18,7 @@ interface Props {
 const NAV = [
     { href: '/dashboard', label: 'Dashboard', icon: 'mdi:view-dashboard-outline' },
     { href: '/pdv',       label: 'PDV',       icon: 'mdi:cart-outline', accent: true, hint: 'F1' },
+    { href: '/tables',    label: 'Mesas',     icon: 'mdi:table-furniture' },
     { href: '/sales',     label: 'Vendas',    icon: 'mdi:receipt-text-outline' },
     { href: '/fiado',     label: 'Fiado',     icon: 'mdi:notebook-outline' },
     { href: '/products',  label: 'Produtos',  icon: 'mdi:bottle-soda-classic-outline' },
