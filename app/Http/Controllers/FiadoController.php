@@ -82,6 +82,45 @@ class FiadoController extends Controller
     }
 
     /**
+     * Lançamento manual de saldo devedor no fiado para um cliente.
+     * Cria uma "venda" fiado pendente sem itens (saldo de abertura / ajuste manual).
+     */
+    public function storeDebt(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'customer_id' => ['required', 'integer', 'exists:customers,id'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'due_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $customer = Customer::findOrFail($data['customer_id']);
+        $amount = round((float) $data['amount'], 2);
+
+        Sale::create([
+            'code' => Sale::nextCode(),
+            'user_id' => auth()->id(),
+            'customer_id' => $customer->id,
+            'subtotal' => $amount,
+            'discount' => 0,
+            'total' => $amount,
+            'payment_method' => Sale::PAYMENT_FIADO,
+            'amount_received' => 0,
+            'change_due' => 0,
+            'status' => Sale::STATUS_PENDING,
+            'amount_paid' => 0,
+            'due_date' => $data['due_date'] ?? null,
+            'notes' => $data['notes'] ?? 'Lançamento manual de saldo devedor',
+        ]);
+
+        return redirect()->route('fiado.index')->with('success', sprintf(
+            'Saldo de R$ %s lançado no fiado de %s.',
+            number_format($amount, 2, ',', '.'),
+            $customer->name,
+        ));
+    }
+
+    /**
      * Registra um recebimento do cliente abatendo o fiado (alocação FIFO no serviço).
      */
     public function storePayment(Request $request, Customer $customer, FiadoService $fiado): RedirectResponse

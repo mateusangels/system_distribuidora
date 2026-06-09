@@ -49,11 +49,13 @@ Route::middleware(['auth'])->group(function () {
 
     // Fiado / contas a receber
     Route::get('/fiado', [FiadoController::class, 'index'])->name('fiado.index');
+    Route::post('/fiado', [FiadoController::class, 'storeDebt'])->name('fiado.store');
     Route::post('/customers/{customer}/payments', [FiadoController::class, 'storePayment'])
         ->name('fiado.payment');
 
     // Customers
     Route::get('/customers/search', [CustomerController::class, 'search'])->name('customers.search');
+    Route::post('/customers/quick', [CustomerController::class, 'quickStore'])->name('customers.quick');
     Route::resource('customers', CustomerController::class);
 
     // Categories (criação rápida via AJAX no form de produto)

@@ -90,6 +90,39 @@ class CustomerController extends Controller
         return back()->with('success', 'Cliente removido.');
     }
 
+    /**
+     * Cadastro rápido (AJAX) usado nas telas de Mesa e Fiado:
+     * cria um cliente só com nome (+ telefone opcional) sem sair da tela.
+     * Retorna o cliente no mesmo formato do autocomplete.
+     */
+    public function quickStore(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $phone = $data['phone'] ?? null;
+
+        $customer = Customer::create([
+            'name' => $data['name'],
+            'phone' => $phone,
+            'whatsapp' => $phone,
+            'credit_limit' => 0,
+        ]);
+
+        return response()->json([
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'document' => $customer->document,
+            'phone' => $customer->phone,
+            'whatsapp' => $customer->whatsapp,
+            'credit_limit' => (float) $customer->credit_limit,
+            'outstanding' => 0.0,
+            'available_credit' => $customer->availableCredit(),
+        ], 201);
+    }
+
     /** AJAX para autocomplete no PDV. Inclui saldo/limite p/ vendas no fiado. */
     public function search(Request $request)
     {

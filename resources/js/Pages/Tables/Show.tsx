@@ -586,9 +586,10 @@ function CustomerPicker({
 }) {
     const [q, setQ] = useState('');
     const [results, setResults] = useState<TableOrderCustomer[]>([]);
+    const [creating, setCreating] = useState(false);
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) { setQ(''); setResults([]); setCreating(false); return; }
         const t = setTimeout(async () => {
             const r = await fetch(`/customers/search?q=${encodeURIComponent(q)}`, { headers: { Accept: 'application/json' } });
             if (r.ok) setResults(await r.json());
@@ -596,13 +597,35 @@ function CustomerPicker({
         return () => clearTimeout(t);
     }, [q, open]);
 
+    if (creating) {
+        return (
+            <QuickCustomerForm
+                open={open}
+                initialName={q}
+                onClose={onClose}
+                onBack={() => setCreating(false)}
+                onCreated={(c) => onPick(c)}
+            />
+        );
+    }
+
     return (
         <Dialog open={open} onClose={onClose} title="Identificar cliente" size="md">
             <div className="space-y-3">
                 <Input placeholder="Buscar por nome, doc ou telefone…" value={q} onChange={(e) => setQ(e.target.value)} sizeBig autoFocus />
                 <div className="max-h-72 overflow-y-auto rounded-md border border-ink-200 dark:border-ink-800">
                     {results.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-sm text-ink-500">{q ? 'Nenhum cliente encontrado.' : 'Comece a digitar para buscar.'}</div>
+                        <div className="px-4 py-6 text-center text-sm text-ink-500">
+                            {q ? (
+                                <div className="space-y-3">
+                                    <div>Nenhum cliente encontrado para “{q}”.</div>
+                                    <Button onClick={() => setCreating(true)}>
+                                        <Icon name="mdi:account-plus" className="h-4 w-4" />
+                                        Cadastrar “{q}” agora
+                                    </Button>
+                                </div>
+                            ) : 'Comece a digitar para buscar.'}
+                        </div>
                     ) : results.map((c) => (
                         <button
                             key={c.id}
@@ -621,13 +644,84 @@ function CustomerPicker({
                     ))}
                 </div>
                 <div className="flex justify-between">
-                    <a href="/customers?new=1" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline dark:text-brand-300">
+                    <button
+                        type="button"
+                        onClick={() => setCreating(true)}
+                        className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline dark:text-brand-300"
+                    >
                         <Icon name="mdi:plus" className="h-4 w-4" />
                         Cadastrar novo cliente
-                    </a>
+                    </button>
                     <Button variant="ghost" onClick={onClose}>Fechar</Button>
                 </div>
             </div>
+        </Dialog>
+    );
+}
+
+/** Cadastro rápido (nome + celular) — usado nas mesas e no fiado, sem sair da tela. */
+function QuickCustomerForm({
+    open, initialName, onClose, onBack, onCreated,
+}: {
+    open: boolean;
+    initialName?: string;
+    onClose: () => void;
+    onBack?: () => void;
+    onCreated: (c: TableOrderCustomer) => void;
+}) {
+    const [name, setName] = useState(initialName ?? '');
+    const [phone, setPhone] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (open) { setName(initialName ?? ''); setPhone(''); setErr(null); setSaving(false); }
+    }, [open, initialName]);
+
+    const submit = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!name.trim()) { setErr('Informe o nome do cliente.'); return; }
+        setSaving(true);
+        setErr(null);
+        try {
+            const c = await api('/customers/quick', 'POST', { name: name.trim(), phone: phone.trim() || null });
+            onCreated(c);
+        } catch (e) {
+            setErr((e as Error).message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} title="Cadastrar cliente" size="sm">
+            <form onSubmit={submit} className="space-y-3">
+                <Input label="Nome *" value={name} onChange={(e) => setName(e.target.value)} sizeBig autoFocus />
+                <Input
+                    label="Celular / WhatsApp"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    inputMode="tel"
+                    hint="Opcional"
+                />
+                {err && (
+                    <div className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-200">
+                        <Icon name="mdi:alert-circle-outline" className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{err}</span>
+                    </div>
+                )}
+                <div className="flex justify-between gap-2 pt-2">
+                    <Button type="button" variant="ghost" onClick={onBack ?? onClose} disabled={saving}>
+                        <Icon name="mdi:arrow-left" className="h-4 w-4" />
+                        Voltar
+                    </Button>
+                    <Button type="submit" disabled={saving}>
+                        <Icon name={saving ? 'mdi:loading' : 'mdi:check'} className={`h-4 w-4 ${saving ? 'animate-spin' : ''}`} />
+                        {saving ? 'Salvando…' : 'Cadastrar e usar'}
+                    </Button>
+                </div>
+            </form>
         </Dialog>
     );
 }

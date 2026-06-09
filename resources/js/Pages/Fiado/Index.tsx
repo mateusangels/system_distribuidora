@@ -6,9 +6,21 @@ import { Table, TBody, TD, TH, THead, TR } from '@/Components/ui/Table';
 import Badge from '@/Components/ui/Badge';
 import Button from '@/Components/ui/Button';
 import Input from '@/Components/ui/Input';
+import Dialog from '@/Components/ui/Dialog';
 import Icon from '@/Components/ui/Icon';
 import { brl, dateBr, dateTimeBr, paymentLabel } from '@/lib/format';
 import type { Payment } from '@/types';
+
+interface PickedCustomer {
+    id: number;
+    name: string;
+    document: string | null;
+    phone: string | null;
+    whatsapp: string | null;
+    outstanding?: number;
+}
+
+const csrf = () => (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
 
 interface Debtor {
     id: number;
@@ -33,6 +45,7 @@ interface Props {
 
 export default function FiadoIndex({ debtors, metrics, recentPayments, filters }: Props) {
     const [q, setQ] = useState(filters.q ?? '');
+    const [newOpen, setNewOpen] = useState(false);
 
     useEffect(() => {
         const t = setTimeout(() => {
@@ -47,6 +60,16 @@ export default function FiadoIndex({ debtors, metrics, recentPayments, filters }
         <AppLayout title="Fiado — Contas a receber">
             <Head title="Fiado" />
             <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-ink-500 dark:text-ink-400">
+                        Acompanhe quem deve, lance saldos e receba pagamentos.
+                    </p>
+                    <Button onClick={() => setNewOpen(true)}>
+                        <Icon name="mdi:notebook-plus-outline" className="h-4 w-4" />
+                        Novo fiado
+                    </Button>
+                </div>
+
                 {/* Métricas */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <MetricCard
@@ -183,7 +206,218 @@ export default function FiadoIndex({ debtors, metrics, recentPayments, filters }
                     </CardBody>
                 </Card>
             </div>
+
+            <NewFiadoDialog open={newOpen} onClose={() => setNewOpen(false)} />
         </AppLayout>
+    );
+}
+
+function NewFiadoDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+    const [customer, setCustomer] = useState<PickedCustomer | null>(null);
+    const [q, setQ] = useState('');
+    const [results, setResults] = useState<PickedCustomer[]>([]);
+    const [mode, setMode] = useState<'pick' | 'create'>('pick');
+
+    // Cadastro rápido
+    const [newName, setNewName] = useState('');
+    const [newPhone, setNewPhone] = useState('');
+    const [creating, setCreating] = useState(false);
+
+    // Lançamento
+    const [amount, setAmount] = useState('');
+    const [dueDate, setDueDate] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!open) {
+            setCustomer(null); setQ(''); setResults([]); setMode('pick');
+            setNewName(''); setNewPhone(''); setCreating(false);
+            setAmount(''); setDueDate(''); setSaving(false); setErr(null);
+        }
+    }, [open]);
+
+    // Busca de clientes
+    useEffect(() => {
+        if (!open || customer || mode !== 'pick') return;
+        const t = setTimeout(async () => {
+            const r = await fetch(`/customers/search?q=${encodeURIComponent(q)}`, { headers: { Accept: 'application/json' } });
+            if (r.ok) setResults(await r.json());
+        }, 200);
+        return () => clearTimeout(t);
+    }, [q, open, customer, mode]);
+
+    const createCustomer = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!newName.trim()) { setErr('Informe o nome do cliente.'); return; }
+        setCreating(true);
+        setErr(null);
+        try {
+            const res = await fetch('/customers/quick', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf(),
+                },
+                body: JSON.stringify({ name: newName.trim(), phone: newPhone.trim() || null }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data?.errors ? Object.values(data.errors).flat().join(' • ') : (data?.message || 'Erro ao cadastrar.'));
+            }
+            setCustomer(data);
+            setMode('pick');
+        } catch (e) {
+            setErr((e as Error).message);
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const submit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        setErr(null);
+        if (!customer) { setErr('Selecione ou cadastre um cliente.'); return; }
+        const value = parseFloat(amount.replace(',', '.'));
+        if (!value || value <= 0) { setErr('Informe um valor maior que zero.'); return; }
+        setSaving(true);
+        router.post('/fiado', {
+            customer_id: customer.id,
+            amount: value,
+            due_date: dueDate || null,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => onClose(),
+            onError: (errors) => setErr(Object.values(errors).flat().join(' • ') || 'Erro ao lançar saldo.'),
+            onFinish: () => setSaving(false),
+        });
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} title="Novo lançamento no fiado" size="md">
+            <div className="space-y-4">
+                {/* Etapa 1: cliente */}
+                {!customer ? (
+                    mode === 'create' ? (
+                        <form onSubmit={createCustomer} className="space-y-3">
+                            <div className="text-xs font-medium uppercase tracking-wide text-ink-500">Cadastrar cliente</div>
+                            <Input label="Nome *" value={newName} onChange={(e) => setNewName(e.target.value)} sizeBig autoFocus />
+                            <Input
+                                label="Celular / WhatsApp"
+                                value={newPhone}
+                                onChange={(e) => setNewPhone(e.target.value)}
+                                placeholder="(00) 00000-0000"
+                                inputMode="tel"
+                                hint="Opcional"
+                            />
+                            {err && <ErrBox msg={err} />}
+                            <div className="flex justify-between gap-2">
+                                <Button type="button" variant="ghost" onClick={() => { setMode('pick'); setErr(null); }} disabled={creating}>
+                                    <Icon name="mdi:arrow-left" className="h-4 w-4" />
+                                    Voltar
+                                </Button>
+                                <Button type="submit" disabled={creating}>
+                                    <Icon name={creating ? 'mdi:loading' : 'mdi:check'} className={`h-4 w-4 ${creating ? 'animate-spin' : ''}`} />
+                                    {creating ? 'Salvando…' : 'Cadastrar e usar'}
+                                </Button>
+                            </div>
+                        </form>
+                    ) : (
+                        <div className="space-y-3">
+                            <Input placeholder="Buscar cliente por nome, doc ou telefone…" value={q} onChange={(e) => setQ(e.target.value)} sizeBig autoFocus />
+                            <div className="max-h-60 overflow-y-auto rounded-md border border-ink-200 dark:border-ink-800">
+                                {results.length === 0 ? (
+                                    <div className="px-4 py-6 text-center text-sm text-ink-500">
+                                        {q ? (
+                                            <div className="space-y-3">
+                                                <div>Nenhum cliente encontrado para “{q}”.</div>
+                                                <Button onClick={() => { setNewName(q); setMode('create'); }}>
+                                                    <Icon name="mdi:account-plus" className="h-4 w-4" />
+                                                    Cadastrar “{q}” agora
+                                                </Button>
+                                            </div>
+                                        ) : 'Comece a digitar para buscar.'}
+                                    </div>
+                                ) : results.map((c) => (
+                                    <button
+                                        key={c.id}
+                                        type="button"
+                                        onClick={() => setCustomer(c)}
+                                        className="flex w-full items-center justify-between border-b border-ink-200 px-4 py-3 text-left last:border-0 hover:bg-ink-50 dark:border-ink-800 dark:hover:bg-ink-800"
+                                    >
+                                        <div>
+                                            <div className="font-medium">{c.name}</div>
+                                            <div className="text-xs text-ink-500">
+                                                {c.document || '—'}
+                                                {(c.outstanding ?? 0) > 0 && <span className="ml-2 text-amber-600 dark:text-amber-300">fiado: {brl(c.outstanding ?? 0)}</span>}
+                                            </div>
+                                        </div>
+                                        <Badge tone="default">{c.whatsapp ?? c.phone ?? '—'}</Badge>
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => { setNewName(q); setMode('create'); }}
+                                className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline dark:text-brand-300"
+                            >
+                                <Icon name="mdi:plus" className="h-4 w-4" />
+                                Cadastrar novo cliente
+                            </button>
+                        </div>
+                    )
+                ) : (
+                    /* Etapa 2: valor */
+                    <form onSubmit={submit} className="space-y-4">
+                        <div className="flex items-center justify-between rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-3 dark:border-ink-800 dark:bg-ink-950/50">
+                            <div>
+                                <div className="text-xs uppercase tracking-wide text-ink-500">Cliente</div>
+                                <div className="font-medium">{customer.name}</div>
+                                {(customer.outstanding ?? 0) > 0 && (
+                                    <div className="text-xs text-amber-600 dark:text-amber-300">já deve {brl(customer.outstanding ?? 0)}</div>
+                                )}
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setCustomer(null)}>
+                                <Icon name="mdi:swap-horizontal" className="h-4 w-4" />
+                                Trocar
+                            </Button>
+                        </div>
+                        <Input
+                            label="Valor do saldo devedor (R$) *"
+                            type="number"
+                            step="0.01"
+                            min={0.01}
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            placeholder="0,00"
+                            sizeBig
+                            autoFocus
+                        />
+                        <Input label="Vencimento" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} hint="Opcional" />
+                        {err && <ErrBox msg={err} />}
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Cancelar</Button>
+                            <Button type="submit" size="lg" disabled={saving}>
+                                <Icon name={saving ? 'mdi:loading' : 'mdi:notebook-plus-outline'} className={`h-5 w-5 ${saving ? 'animate-spin' : ''}`} />
+                                {saving ? 'Lançando…' : 'Lançar no fiado'}
+                            </Button>
+                        </div>
+                    </form>
+                )}
+            </div>
+        </Dialog>
+    );
+}
+
+function ErrBox({ msg }: { msg: string }) {
+    return (
+        <div className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-200">
+            <Icon name="mdi:alert-circle-outline" className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{msg}</span>
+        </div>
     );
 }
 
